@@ -2,9 +2,10 @@
 import sys
 from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QDockWidget, QLabel
 from PySide6.QtWidgets import QGridLayout, QBoxLayout, QVBoxLayout, QPushButton, QLayout
-from PySide6.QtWidgets import QTableView, QHeaderView
-from PySide6.QtCore import Qt, QSize
-
+from PySide6.QtWidgets import QTableView, QHeaderView, QFrame
+from PySide6.QtCore import Qt, QSize, QFile
+from PySide6.QtUiTools import QUiLoader
+from database import database
 
 class Widget(QWidget):
     def __init__(self):
@@ -20,8 +21,12 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(Widget())
         self.centralWidget().setLayout(self.main_scene)
 
+        self.current_menu = "games"
+        self.menu_dict = {}
+
         self.create_navbar()
         self.create_games_menu()
+        self.db = database()
 
 
     def create_games_menu(self):
@@ -29,6 +34,7 @@ class MainWindow(QMainWindow):
         construct and show the table of games;
         takes the main window as argument
         """
+        games_frame = QFrame()
         games_layout = QVBoxLayout()
         game_table = QTableView()
         # game_table.setColumnCount(5)
@@ -53,7 +59,11 @@ class MainWindow(QMainWindow):
         game_table.setVisible(True)
         games_layout.addWidget(title)
         games_layout.addWidget(game_table)
-        self.main_scene.addLayout(games_layout)
+        games_frame.setLayout(games_layout)
+
+        self.menu_dict["games"] = games_frame
+
+        self.main_scene.addWidget(games_frame)
 
     def create_navbar(self):
         """
@@ -74,11 +84,38 @@ class MainWindow(QMainWindow):
         nav_bar.addWidget(delete_game)
         nav_bar.addWidget(settings)
 
+        # connect functionality
+        settings.clicked.connect(self.show_settings)
+        games.clicked.connect(self.show_games)
+
         self.main_scene.addLayout(nav_bar)
+
+    def show_games(self):
+        if (not self.current_menu == "games"):
+            self.menu_dict[self.current_menu].hide()
+            self.current_menu = "games"
+            self.menu_dict["games"].show()
+
+    def show_settings(self):
+        if (not "settings" in self.menu_dict):
+            settings_ui = QFile("settings.ui")
+            loader = QUiLoader()
+            s = loader.load(settings_ui)
+            if not s:
+                print(loader.errorString())
+                sys.exit(-1)
+            self.main_scene.addWidget(s)
+            self.menu_dict["settings"] = s
+
+        if (not self.current_menu == "settings"):
+            self.menu_dict[self.current_menu].hide()
+            self.current_menu = "settings"
+            self.menu_dict["settings"].show()
 
 
 if __name__ == "__main__":
     app = QApplication([])
+
     main_window = MainWindow()
 
     main_window.setMinimumHeight(480)
