@@ -24,10 +24,20 @@ class MainWindow(QMainWindow):
         self.current_menu = "games"
         self.menu_dict = {}
 
+        # db stuff
+        self.db = database()
+        if (self.db.create_db()):
+            pass
+        else:
+            print("Database creation failed.")
+
         self.create_navbar()
         self.create_games_menu()
-        self.db = database()
 
+        test1 = ["Final Fantasy", "75", "123"]
+        print(self.db.add_item(test1))
+        print(self.db.db.lastError())
+        self.game_table.setModel(self.db.get_games())
 
     def create_games_menu(self):
         """
@@ -37,21 +47,15 @@ class MainWindow(QMainWindow):
         games_frame = QFrame()
         games_layout = QVBoxLayout()
         game_table = QTableView()
-        # game_table.setColumnCount(5)
-        #game_table.setRowCount(1)
+        self.game_table = game_table
+        model = self.db.get_games()
+        game_table.setModel(model)
 
-        # set headers
-        h_list = ["Games", "Progress", "Hours Played", "Genre(s)", "Start Date", "End Date"]
-        horizontal_header = QBoxLayout(QBoxLayout.LeftToRight)
-        for i in h_list:
-            label = QLabel()
-            label.setText(i)
-            horizontal_header.addWidget(label)
-
-        t_header = QHeaderView(Qt.Horizontal)
-        t_header.setLayout(horizontal_header)
-        game_table.setHorizontalHeader(t_header)
-        #game_table.setVerticalHeaderLabels([""])
+        # set view properties
+        #game_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        game_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        #game_table.horizontalHeader().setStretchLastSection(1)
+        game_table.setGridStyle(Qt.SolidLine)
 
         title = QLabel()
         title.setText("Games")
@@ -59,11 +63,19 @@ class MainWindow(QMainWindow):
         game_table.setVisible(True)
         games_layout.addWidget(title)
         games_layout.addWidget(game_table)
+
         games_frame.setLayout(games_layout)
 
         self.menu_dict["games"] = games_frame
 
         self.main_scene.addWidget(games_frame)
+
+    def resizeEvent(self, event):
+        #for i in range(self.db.MAX_VALUES):
+            #self.game_table.setColumnWidth(i, self.game_table.width()/self.db.MAX_VALUES)
+            #self.game_table.setColumnWidth(i, )
+        return super(QMainWindow, self).resizeEvent(event)
+
 
     def create_navbar(self):
         """
@@ -89,6 +101,7 @@ class MainWindow(QMainWindow):
         games.clicked.connect(self.show_games)
 
         self.main_scene.addLayout(nav_bar)
+        self.main_scene.setStretchFactor(nav_bar, 0)
 
     def show_games(self):
         if (not self.current_menu == "games"):
@@ -105,6 +118,7 @@ class MainWindow(QMainWindow):
                 print(loader.errorString())
                 sys.exit(-1)
             self.main_scene.addWidget(s)
+            self.main_scene.setStretchFactor(s, 1)
             self.menu_dict["settings"] = s
 
         if (not self.current_menu == "settings"):
