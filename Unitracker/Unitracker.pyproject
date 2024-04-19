@@ -1,3 +1,3 @@
 {
-    "files": ["database.py","main.py","settings.ui","createDB.sql"]
+    "files": ["database.py","createDB.sql","settings.ui","add_game.ui","main.py"]
 }

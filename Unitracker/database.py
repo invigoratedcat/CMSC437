@@ -43,29 +43,66 @@ class database:
         """
         return a QSqlQueryModel with all the game records
         """
-        headers = ["Name","Progress", "Hours Played", "Start Date", "End Date", "Total achievements", "Completed achievements", "Series name"]
+        headers = ["Name","Progress", "Hours Played", "Start Date", "End Date", "Total\nAchievements", "Completed\nAchievements", "Series name", "Genre", "Platform"]
         model = QSqlQueryModel()
-        model.setQuery("SELECT * FROM game")
-        for i in range(self.MAX_VALUES):
+        q = "WITH genres AS (SELECT name FROM genre) SELECT * FROM game LEFT JOIN ()"
+        # name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name, genre.name AS genre
+        #model.setQuery("SELECT * FROM game LEFT JOIN genre ON (game.name == genre.game_name)")
+        model.setQuery("SELECT game.name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name, genre.name FROM game LEFT JOIN genre ON (game.name == genre.game_name)")
+        for i in range(len(headers)):
             model.setHeaderData(i, Qt.Horizontal, headers[i])
         return model
 
-    def add_item(self, item):
+    def add_item(self, item, genres=None, platforms=None):
         """
-        given a list of values to make a game item from, adds said item to the db and returns the result
+        item: dict of values to make a game item from, adds said item to the db and returns the result
+        genres: list of genres to add for a game
+        platforms: list of platforms to add for a game
         """
+
+        # fields = ["name", "progress", "hours_played", "start_date", "end_date", "total_achievements", "completed_achievements", "series_name"]
+        query = "INSERT INTO game ("
+        for v in item:
+            query += v + ", "
+
+        query = query [:len(query) - 2] + ")"
+        query += " VALUES ("
+        print(query)
+        num_fields = len(item)
+        for i in range(num_fields):
+            if (i != num_fields - 1):
+                query += "?, "
+            else:
+                query += "?)"
+        print(query)
+
 
         q_obj = QSqlQuery()
-        q_obj.prepare("INSERT INTO game (name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        # q_obj.prepare("INSERT INTO game (name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        q_obj.prepare(query)
 
         # bind values
-
-        for i in range(self.MAX_VALUES):
-            if i < len(item):
-                q_obj.bindValue(i, item[i])
-            else:
-                q_obj.bindValue(i, "NULL")
+        for i, v in enumerate(item):
+            q_obj.bindValue(i, item[v])
+            # q_obj.bindValue(i, "NULL")
         rv = q_obj.exec()
+
+        # add genres
+        if (genres is not None):
+            for i in range(len(genres)):
+                q_obj.prepare("INSERT INTO genre (game_name, name) VALUES (?, ?)")
+                q_obj.bindValue(0, item["name"])
+                q_obj.bindValue(1, genres[i])
+                rv = q_obj.exec()
+
+        # add platforms
+        if (platforms is not None):
+            for i in range(len(platforms)):
+                q_obj.prepare("INSERT INTO platform (game_name, name) VALUES (?, ?)")
+                q_obj.bindValue(0, item["name"])
+                q_obj.bindValue(1, platforms[i])
+                rv = q_obj.exec()
+
         q_obj.finish()
         return rv
 

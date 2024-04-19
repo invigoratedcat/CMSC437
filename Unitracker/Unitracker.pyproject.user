@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 6.0.2, 2024-03-10T15:47:13. -->
+<!-- Written by QtCreator 6.0.2, 2024-04-18T13:45:19. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -94,7 +94,7 @@
    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">{c63a2630-cb70-44ef-aac6-a16a8672028b}</value>
    <value type="int" key="ProjectExplorer.Target.ActiveBuildConfiguration">-1</value>
    <value type="int" key="ProjectExplorer.Target.ActiveDeployConfiguration">0</value>
-   <value type="int" key="ProjectExplorer.Target.ActiveRunConfiguration">0</value>
+   <value type="int" key="ProjectExplorer.Target.ActiveRunConfiguration">2</value>
    <value type="int" key="ProjectExplorer.Target.BuildConfigurationCount">0</value>
    <valuemap type="QVariantMap" key="ProjectExplorer.Target.DeployConfiguration.0">
     <valuemap type="QVariantMap" key="ProjectExplorer.BuildConfiguration.BuildStepList.0">
@@ -116,11 +116,11 @@
     <valuelist type="QVariantList" key="CustomOutputParsers"/>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">/home/natlog/project-lz50375/Unitracker/main.py</value>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">PythonEditor.RunConfiguration./home/natlog/project-lz50375/Unitracker/main.py</value>
-    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">/home/natlog/project-lz50375/Unitracker/main.py</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">/home/natlog/project-lz50375/Unitracker/database.py</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">PythonEditor.RunConfiguration./home/natlog/project-lz50375/Unitracker/database.py</value>
+    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">/home/natlog/project-lz50375/Unitracker/database.py</value>
     <value type="QString" key="PythonEditor.RunConfiguation.Interpreter">{63f87dd7-18a5-4540-a2f0-15c3c994f00e}</value>
-    <value type="QString" key="PythonEditor.RunConfiguation.Script">/home/natlog/project-lz50375/Unitracker/main.py</value>
+    <value type="QString" key="PythonEditor.RunConfiguation.Script">/home/natlog/project-lz50375/Unitracker/database.py</value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
     <value type="bool" key="RunConfiguration.UseQmlDebugger">false</value>
@@ -134,10 +134,10 @@
     <valuelist type="QVariantList" key="CustomOutputParsers"/>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">/home/natlog/project-lz50375/Unitracker/database.py</value>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">PythonEditor.RunConfiguration./home/natlog/project-lz50375/Unitracker/database.py</value>
-    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">/home/natlog/project-lz50375/Unitracker/database.py</value>
-    <value type="QString" key="PythonEditor.RunConfiguation.Script">/home/natlog/project-lz50375/Unitracker/database.py</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">/home/natlog/project-lz50375/Unitracker/createDB.sql</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">PythonEditor.RunConfiguration./home/natlog/project-lz50375/Unitracker/createDB.sql</value>
+    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">/home/natlog/project-lz50375/Unitracker/createDB.sql</value>
+    <value type="QString" key="PythonEditor.RunConfiguation.Script">/home/natlog/project-lz50375/Unitracker/createDB.sql</value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
     <value type="bool" key="RunConfiguration.UseQmlDebugger">false</value>
@@ -151,10 +151,11 @@
     <valuelist type="QVariantList" key="CustomOutputParsers"/>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">/home/natlog/project-lz50375/Unitracker/createDB.sql</value>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">PythonEditor.RunConfiguration./home/natlog/project-lz50375/Unitracker/createDB.sql</value>
-    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">/home/natlog/project-lz50375/Unitracker/createDB.sql</value>
-    <value type="QString" key="PythonEditor.RunConfiguation.Script">/home/natlog/project-lz50375/Unitracker/createDB.sql</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">/home/natlog/project-lz50375/Unitracker/main.py</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">PythonEditor.RunConfiguration./home/natlog/project-lz50375/Unitracker/main.py</value>
+    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">/home/natlog/project-lz50375/Unitracker/main.py</value>
+    <value type="QString" key="PythonEditor.RunConfiguation.Interpreter">{63f87dd7-18a5-4540-a2f0-15c3c994f00e}</value>
+    <value type="QString" key="PythonEditor.RunConfiguation.Script">/home/natlog/project-lz50375/Unitracker/main.py</value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
     <value type="bool" key="RunConfiguration.UseQmlDebugger">false</value>

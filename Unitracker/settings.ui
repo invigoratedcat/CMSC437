@@ -48,14 +48,14 @@
    <item>
     <layout class="QGridLayout" name="gridLayout" rowstretch="0,1">
      <item row="0" column="1">
-      <widget class="QRadioButton" name="radioButton">
+      <widget class="QRadioButton" name="light_theme">
        <property name="text">
         <string>Light Mode</string>
        </property>
       </widget>
      </item>
      <item row="0" column="3">
-      <widget class="QRadioButton" name="radioButton_3">
+      <widget class="QRadioButton" name="system_theme">
        <property name="text">
         <string>Automatic (System Theme)</string>
        </property>
@@ -65,14 +65,14 @@
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="label_3">
+      <widget class="QLabel" name="textsize_label">
        <property name="text">
         <string>Text Size:</string>
        </property>
       </widget>
      </item>
      <item row="0" column="2">
-      <widget class="QRadioButton" name="radioButton_2">
+      <widget class="QRadioButton" name="dark_theme">
        <property name="text">
         <string>Dark Mode</string>
        </property>
@@ -98,7 +98,7 @@
       </widget>
      </item>
      <item row="0" column="0">
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="theme_label">
        <property name="text">
         <string>Theme:</string>
        </property>
@@ -121,6 +121,12 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>light_theme</tabstop>
+  <tabstop>dark_theme</tabstop>
+  <tabstop>system_theme</tabstop>
+  <tabstop>comboBox</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
