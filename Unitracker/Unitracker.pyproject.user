@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 6.0.2, 2024-04-18T13:45:19. -->
+<!-- Written by QtCreator 6.0.2, 2024-04-21T14:17:00. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -137,6 +137,7 @@
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">/home/natlog/project-lz50375/Unitracker/createDB.sql</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">PythonEditor.RunConfiguration./home/natlog/project-lz50375/Unitracker/createDB.sql</value>
     <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">/home/natlog/project-lz50375/Unitracker/createDB.sql</value>
+    <value type="QString" key="PythonEditor.RunConfiguation.Interpreter">{6c42feef-ce01-4155-bb90-fcea66b9793a}</value>
     <value type="QString" key="PythonEditor.RunConfiguation.Script">/home/natlog/project-lz50375/Unitracker/createDB.sql</value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
