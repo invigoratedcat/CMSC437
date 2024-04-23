@@ -336,14 +336,29 @@ class MainWindow(QMainWindow):
             msg.setText("No game selected; please select one game for editing.")
             msg.exec()
         else:
-            # get game and populate menu fields
+            # get game, genre, and platform records
             row = selected_rows[0]
             game_name = self.game_table.model().index(row, 0).data()
             game = self.db.get_game(game_name)
+            genres = self.db.get_genres(game_name)
+            platforms = self.db.get_platforms(game_name)
 
+            # populate menu fields
             edit = self.menu_dict["edit_game"]
             for i, f in enumerate(edit.fields):
-                if (game.isNull(f)):
+                if (platforms is not None and f == "platform"):
+                    pforms = ""
+                    for j in range(len(platforms)):
+                        pforms += platforms[j] + ","
+                    pforms = pforms[:len(pforms) - 1]
+                    edit.fields[f].setText(pforms)
+                elif (genres is not None and f == "genre"):
+                    g = ""
+                    for j in range(len(genres)):
+                        g += genres[j] + ","
+                    g = g[:len(g) - 1]
+                    edit.fields[f].setText(g)
+                elif (game.isNull(f)):
                     edit.fields[f].setText("")
                 else:
                     edit.fields[f].setText(str(game.value(i)))

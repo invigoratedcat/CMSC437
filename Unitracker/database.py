@@ -65,7 +65,8 @@ class database:
 
     def add_item(self, item, genres=None, platforms=None):
         """
-        item: dict of values to make a game item from, adds said item to the db and returns the result
+        item: dict of values to make a game item from; adds said item to the db
+        and returns the result
         genres: list of genres to add for a game
         platforms: list of platforms to add for a game
         """
@@ -87,13 +88,27 @@ class database:
         q_obj = QSqlQuery()
         # insert series into the series table in case it doesn't exist
         if ("series_name" in item.keys()):
-            # TODO: need to check for old series and update derived attributes
-
-            q_obj.prepare("INSERT INTO series (name, num_games, total_playtime) VALUES (?, ?, ?)")
+            # check for old series
+            q_obj.prepare("SELECT * FROM series WHERE name=?")
             q_obj.bindValue(0, item["series_name"])
-            q_obj.bindValue(1, 1)
-            q_obj.bindValue(2, item["hours_played"])
             q_obj.exec()
+            q_obj.next()
+            old_series = q_obj.record()
+
+            if (old_series.isNull("series_name")):
+                # series doesn't exist so just add it
+                q_obj.prepare("INSERT INTO series (name, num_games, total_playtime) VALUES (?, ?, ?)")
+                q_obj.bindValue(0, item["series_name"])
+                q_obj.bindValue(1, 1)
+                q_obj.bindValue(2, item["hours_played"])
+                q_obj.exec()
+            else:
+                # series exists so update derived attributes
+                q_obj.prepare("UPDATE series SET num_games=?, total_playtime=? WHERE name=?")
+                q_obj.bindValue(0, old_series.value("num_games") + 1)
+                q_obj.bindValue(1, old_series.value("total_playtime") + item["hours_played"])
+                q_obj.bindValue(2, item["series_name"])
+                q_obj.exec()
 
         # q_obj.prepare("INSERT INTO game (name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         q_obj.prepare(query)
@@ -170,17 +185,24 @@ class database:
 
             # old series = new series so update attributes based on new series
             if (not old_series is None and (item["series_name"] == old_game.value("series_name"))):
+                old_hours = 0.0 if old_game.isNull("hours_played") else float(old_game.value("hours_played"))
+                old_total = 0.0 if old_series.isNull("total_playtime") else float(old_series.value("total_playtime"))
+
                 q_obj.prepare("UPDATE series SET total_playtime=? WHERE name=?")
-                q_obj.bindValue(0, item("hours_played") + old_series.value("total_playtime") - old_game.value("hours_played"))
+                q_obj.bindValue(0, float(item["hours_played"]) + old_total - old_hours)
                 q_obj.bindValue(1, old_game.value("series_name"))
                 q_obj.exec()
             # old series and new series are different
             elif (not old_series is None and (item["series_name"] != old_game.value("series_name"))):
                 # if old series still has at least one game attached, update it
-                if (old_series.value("num_games") - 1 > 0):
+                old_hours = 0.0 if old_game.isNull("hours_played") else float(old_game.value("hours_played"))
+                old_total = 0.0 if old_series.isNull("total_playtime") else float(old_series.value("total_playtime"))
+                old_num = old_series.value("num_games")
+
+                if (old_num - 1 > 0):
                     q_obj.prepare("UPDATE series SET num_games=?, total_playtime=? WHERE name=?")
-                    q_obj.bindValue(0, old_series.value("num_games") - 1)
-                    q_obj.bindValue(1, old_series.value("total_playtime") - old_game.value("hours_played"))
+                    q_obj.bindValue(0, old_num - 1)
+                    q_obj.bindValue(1, old_total - old_hours)
                     q_obj.bindValue(2, old_game.value("series_name"))
                     q_obj.exec()
                 # old series has no games left, delete it
@@ -196,23 +218,47 @@ class database:
                 q_obj.bindValue(2, item["hours_played"])
                 q_obj.exec()
 
+        q_obj.prepare("SELECT * FROM genre WHERE game_name=?")
+        q_obj.bindValue(0, old_game.value("name"))
+        q_obj.exec()
+        q_obj.next()
+        old_genres = self.get_genres(old_game.value("name"))
 
-        # TODO: need to replace genre records (delete old ones, insert new ones)
-        # add genres
-        if (genres is not None):
-            for i in range(len(genres)):
-                q_obj.prepare("INSERT INTO genre (game_name, name) VALUES (?, ?)")
-                q_obj.bindValue(0, item["name"])
-                q_obj.bindValue(1, genres[i])
-                rv = q_obj.exec()
+        # replace old genre records with new ones
+        if (set(old_genres) != set(genres)):
+            q_obj.prepare("DELETE FROM genre WHERE game_name=?")
+            q_obj.bindValue(0, old_game.value("name"))
+            q_obj.exec()
 
-        # add platforms
-        if (platforms is not None):
-            for i in range(len(platforms)):
-                q_obj.prepare("INSERT INTO platform (game_name, name) VALUES (?, ?)")
-                q_obj.bindValue(0, item["name"])
-                q_obj.bindValue(1, platforms[i])
-                rv = q_obj.exec()
+            if (genres is not None):
+                # add genres
+                for i in range(len(genres)):
+                    q_obj.prepare("INSERT INTO genre (game_name, name) VALUES (?, ?)")
+                    q_obj.bindValue(0, item["name"])
+                    q_obj.bindValue(1, genres[i])
+                    rv = q_obj.exec()
+
+        q_obj.prepare("SELECT * FROM platform WHERE game_name=?")
+        q_obj.bindValue(0, old_game.value("name"))
+        q_obj.exec()
+        q_obj.next()
+        old_platforms = self.get_platforms(old_game.value("name"))
+
+        # replace old platform records with new ones
+        if (set(old_platforms) != set(platforms)):
+            q_obj.prepare("DELETE FROM platform WHERE game_name=?")
+            q_obj.bindValue(0, old_game.value("name"))
+            q_obj.exec()
+
+            # add platforms
+            if (platforms is not None):
+                for i in range(len(platforms)):
+                    q_obj.prepare("INSERT INTO platform (game_name, name) VALUES (?, ?)")
+                    q_obj.bindValue(0, item["name"])
+                    q_obj.bindValue(1, platforms[i])
+                    rv = q_obj.exec()
+            elif (old_game.value("name") == item["name"]):
+                pass
 
     def get_game(self, name):
         """
@@ -224,6 +270,33 @@ class database:
         q_obj.exec()
         q_obj.next()
         return q_obj.record()
+
+    def get_genres(self, name):
+        """
+        returns a list of all genres given a game's name
+        """
+        q_obj = QSqlQuery()
+        q_obj.prepare("SELECT * FROM genre WHERE game_name=?")
+        q_obj.bindValue(0, name)
+        q_obj.exec()
+        genres = []
+        while (q_obj.next()):
+            genres.append(q_obj.record().value("name"))
+        return genres
+
+    def get_platforms(self, name):
+        """
+        returns a list of all platforms given a game's name
+        """
+        q_obj = QSqlQuery()
+        q_obj.prepare("SELECT * FROM platform WHERE game_name=?")
+        q_obj.bindValue(0, name)
+        q_obj.exec()
+        platforms = []
+        while (q_obj.next()):
+            platforms.append(q_obj.record().value("name"))
+
+        return platforms
 
     def close(self):
         if self.db.isOpen():
