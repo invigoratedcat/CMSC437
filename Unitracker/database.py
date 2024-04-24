@@ -39,6 +39,45 @@ class database:
         f.close()
         return True
 
+    def import_db(self, filename):
+        """
+        given a .sqlite filename, will check if it has the valid table and attribute setup
+        before overwriting the current database with it
+        """
+        try:
+            file = open(filename, 'r')
+            file.close()
+            test_db = self.db.addDatabase("QSQLITE", filename)
+            test_db.setDatabaseName("test_connection")
+            test_db.open()
+
+            # test that each table exists and has all the attributes
+            q_test = QSqlQuery("test_connection")
+            q_test.prepare("SELECT name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name FROM game")
+            if (not q_test.exec()):
+                print("game table error")
+                return False
+
+            if not (q_test.exec("SELECT game_name, name FROM genre")):
+                print("genre table error")
+                return False
+
+            if not (q_test.exec("SELECT game_name, name FROM platform")):
+                print("platform table error")
+                return False
+
+            if (not q_test.exec("SELECT name, num_games, total_playtime FROM series")):
+                print("series table error")
+                return False
+
+            test_db.close()
+            test_db.removeDatabase("test_connection")
+
+            # TODO: overwrite the database
+            return True
+        except FileNotFoundError:
+            return False
+
     def get_games(self):
         """
         return a QSqlQueryModel with all the game records

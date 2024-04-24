@@ -3,21 +3,15 @@ import sys
 from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QDockWidget, QLabel
 from PySide6.QtWidgets import QGridLayout, QBoxLayout, QVBoxLayout, QPushButton, QLayout
 from PySide6.QtWidgets import QTableView, QHeaderView, QFrame, QRadioButton, QLineEdit
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox, QComboBox, QFileDialog
 from PySide6.QtCore import Qt, QSize, QFile
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtGui import QPalette
 from database import database
-import qdarkstyle
+import qdarktheme
 
 class Widget(QWidget):
     def __init__(self):
         QWidget.__init__(self)
-
-class Palette(QPalette):
-    def __init__(self, ID):
-        QPalette.__init__(self)
-        self.ID = ID
 
 class MainWindow(QMainWindow):
     def __init__(self, app):
@@ -28,12 +22,8 @@ class MainWindow(QMainWindow):
         self.main_scene = QBoxLayout(QBoxLayout.LeftToRight)
         self.setCentralWidget(Widget())
         self.centralWidget().setLayout(self.main_scene)
-        dark_p = Palette("dark")
-        light_p = Palette("light")
-        self.dark_theme = qdarkstyle.load_stylesheet(qt_api="pyside6", palette=dark_p)
-        self.light_theme = qdarkstyle.load_stylesheet(qt_api="pyside6", palette=light_p)
-        self.set_dark()
-
+        self.current_theme = "dark"
+        self.update_font(1)
         self.current_menu = "games"
         self.menu_dict = {}
 
@@ -124,19 +114,64 @@ class MainWindow(QMainWindow):
 
     # functions to set themes
     def set_light(self):
-        self.app.setStyleSheet(self.light_theme)
+        qdarktheme.setup_theme("light", additional_qss=self.font_qss)
+        self.current_theme = "light"
 
     def set_dark(self):
-        self.app.setStyleSheet(self.dark_theme)
+        qdarktheme.setup_theme("dark", additional_qss=self.font_qss)
+        self.current_theme = "dark"
 
     def set_system(self):
-        pass
+        qdarktheme.setup_theme("auto", additional_qss=self.font_qss)
+        self.current_theme = "auto"
 
-    def update_font(self, size):
+    def update_font(self, index):
         """
         update the app's text size based on preset options: small, medium, large
         """
-        pass
+        size = "small" if index == 0 else "medium" if index == 1 else "large"
+        if (size == "small"):
+            self.font_qss = """
+            * {
+                font-size: 12px;
+            }
+            QLabel#title {
+                font-size: 16px;
+            }
+            """
+        elif (size == "medium"):
+            self.font_qss = """
+            * {
+                font-size: 14px;
+            }
+            QLabel#title {
+                font-size: 20px;
+            }
+            """
+        elif (size == "large"):
+            self.font_qss = """
+            * {
+                font-size: 18px;
+            }
+            QLabel#title {
+                font-size: 26px;
+            }
+            """
+        qdarktheme.setup_theme(self.current_theme, additional_qss=self.font_qss)
+
+    def start_import(self):
+        file_name = QFileDialog.getOpenFileName(self.menu_dict["settings"], "Choose import file", "~/", "Unitracker games (*.sqlite *.xml *.json)")
+        chosen = self.menu_dict["settings"].findChild(QLabel, "chosen_import")
+        chosen.setText(file_name[0])
+
+    def finish_import(self):
+        chosen = self.menu_dict["settings"].findChild(QLabel, "chosen_import")
+        to_import = chosen.text()
+        print("Import result:", self.db.import_db(to_import))
+
+
+    def start_export(self):
+        file_name = QFileDialog.getSaveFileName(self.menu_dict["settings"], "Choose export file", "~/", " Unitracker games (*.sqlite *.xml *.json)")
 
     def add_game(self):
         """
@@ -197,6 +232,7 @@ class MainWindow(QMainWindow):
 
         self.db.edit_item(self.old_game_name, game, genres, platforms)
         self.game_table.setModel(self.db.get_games())
+        self.show_games()
 
     def delete_game(self, name):
         """
@@ -222,12 +258,22 @@ class MainWindow(QMainWindow):
             self.menu_dict["settings"] = s
 
             # connect buttons
+            set_text = s.findChild(QComboBox, "text_size")
+            set_text.setCurrentIndex(1)
             set_light = s.findChild(QRadioButton, "light_theme")
             set_dark = s.findChild(QRadioButton, "dark_theme")
             set_system = s.findChild(QRadioButton, "system_theme")
+            start_import = s.findChild(QPushButton, "import_button")
+            select_import = s.findChild(QPushButton, "select_import")
+            start_export = s.findChild(QPushButton, "export_button")
             set_light.clicked.connect(self.set_light)
             set_dark.clicked.connect(self.set_dark)
             set_system.clicked.connect(self.set_system)
+            set_text.currentIndexChanged.connect(self.update_font)
+            select_import.clicked.connect(self.start_import)
+            start_import.clicked.connect(self.finish_import)
+            start_export.clicked.connect(self.start_export)
+
 
     def load_edit(self):
         """

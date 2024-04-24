@@ -15,7 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <widget class="QLabel" name="label">
+    <widget class="QLabel" name="title">
      <property name="font">
       <font>
        <pointsize>20</pointsize>
@@ -46,40 +46,63 @@
     </spacer>
    </item>
    <item>
-    <layout class="QGridLayout" name="gridLayout" rowstretch="0,1">
+    <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0">
+     <item row="3" column="0" alignment="Qt::AlignRight">
+      <widget class="QLabel" name="export_label">
+       <property name="text">
+        <string>Export:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QRadioButton" name="dark_theme">
+       <property name="toolTip">
+        <string>Sets the app's theme to dark</string>
+       </property>
+       <property name="text">
+        <string>Dark Mode</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="3">
+      <widget class="QPushButton" name="import_button">
+       <property name="text">
+        <string>Import</string>
+       </property>
+      </widget>
+     </item>
      <item row="0" column="1">
       <widget class="QRadioButton" name="light_theme">
+       <property name="toolTip">
+        <string>Sets the app's theme to light</string>
+       </property>
        <property name="text">
         <string>Light Mode</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="3">
-      <widget class="QRadioButton" name="system_theme">
+     <item row="0" column="0" alignment="Qt::AlignRight">
+      <widget class="QLabel" name="theme_label">
        <property name="text">
-        <string>Automatic (System Theme)</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
+        <string>Theme:</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
+     <item row="1" column="0" alignment="Qt::AlignRight">
       <widget class="QLabel" name="textsize_label">
        <property name="text">
         <string>Text Size:</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="2">
-      <widget class="QRadioButton" name="dark_theme">
-       <property name="text">
-        <string>Dark Mode</string>
-       </property>
-      </widget>
-     </item>
      <item row="1" column="1">
-      <widget class="QComboBox" name="comboBox">
+      <widget class="QComboBox" name="text_size">
+       <property name="toolTip">
+        <string>Choose the global text size</string>
+       </property>
+       <property name="currentText">
+        <string>Medium</string>
+       </property>
        <item>
         <property name="text">
          <string>Small</string>
@@ -97,10 +120,56 @@
        </item>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="theme_label">
+     <item row="3" column="1">
+      <widget class="QPushButton" name="export_button">
        <property name="text">
-        <string>Theme:</string>
+        <string>Export As</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0" alignment="Qt::AlignRight">
+      <widget class="QLabel" name="import_label">
+       <property name="text">
+        <string>Import:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QRadioButton" name="system_theme">
+       <property name="toolTip">
+        <string>Sets the app theme to your system's theme</string>
+       </property>
+       <property name="text">
+        <string>Automatic (System Theme)</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QPushButton" name="select_import">
+       <property name="text">
+        <string>Select Import File</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="2">
+      <widget class="QLabel" name="chosen_import">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Shows the file currently selected for importing</string>
+       </property>
+       <property name="text">
+        <string>(File to import goes here)</string>
+       </property>
+       <property name="scaledContents">
+        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -125,7 +194,7 @@
   <tabstop>light_theme</tabstop>
   <tabstop>dark_theme</tabstop>
   <tabstop>system_theme</tabstop>
-  <tabstop>comboBox</tabstop>
+  <tabstop>text_size</tabstop>
  </tabstops>
  <resources/>
  <connections/>
