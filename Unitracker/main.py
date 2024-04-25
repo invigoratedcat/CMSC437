@@ -78,6 +78,18 @@ class MainWindow(QMainWindow):
 
         self.main_scene.addWidget(games_frame)
 
+    def create_shortcuts(self):
+        """
+        create/set all the keyboard shortcuts
+        """
+        pass
+
+    def create_help(self):
+        """
+        create the help menu
+        """
+        pass
+
     def resizeEvent(self, event):
         #for i in range(self.db.MAX_VALUES):
             #self.game_table.setColumnWidth(i, self.game_table.width()/self.db.MAX_VALUES)
@@ -108,6 +120,7 @@ class MainWindow(QMainWindow):
         games.clicked.connect(self.show_games)
         add_game.clicked.connect(self.show_add)
         edit_game.clicked.connect(self.show_edit)
+        delete_game.clicked.connect(self.delete_game)
 
         self.main_scene.addLayout(nav_bar)
         self.main_scene.setStretchFactor(nav_bar, 0)
@@ -234,11 +247,38 @@ class MainWindow(QMainWindow):
         self.game_table.setModel(self.db.get_games())
         self.show_games()
 
-    def delete_game(self, name):
+    def delete_game(self):
         """
-        Prompts user for confirmation, then deletes the selected game
+        Prompts user for confirmation, then deletes the selected games if user confirms
         """
-        pass
+        selected_indexes = self.game_table.selectionModel().selectedIndexes()
+        selected_rows = sorted(set(i.row() for i in selected_indexes))
+        if (len(selected_rows) < 1):
+            msg = QMessageBox.critical(self, "Delete Error", "No game selected; please choose at least one game to delete and try again.")
+
+        elif (len(selected_rows) > 1):
+            game_names = ""
+            to_delete = []
+            for i in range(len(selected_rows)):
+                temp = self.game_table.model().index(selected_rows[i], 0).data()
+                game_names += temp + ", "
+                to_delete.append(temp)
+            game_names = game_names[:len(game_names) - 2]
+
+            msg = QMessageBox.question(self, "Confirm Delete", "Are you sure you want to delete the following games: \n" + game_names)
+            if (msg == QMessageBox.Yes):
+                for i in range(len(to_delete)):
+                    self.db.delete_item(to_delete[i])
+                self.game_table.setModel(self.db.get_games())
+
+        else:
+            row = selected_rows[0]
+            game_name = self.game_table.model().index(row, 0).data()
+
+            msg = QMessageBox.question(self, "Confirm Delete", "Are you sure you want to delete the game " + game_name)
+            if (msg == QMessageBox.Yes):
+                self.db.delete_item(game_name)
+                self.game_table.setModel(self.db.get_games())
 
     def load_settings(self):
         """

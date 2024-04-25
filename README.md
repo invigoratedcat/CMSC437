@@ -4,4 +4,6 @@ Project Name: Unitracker
 Author: Logan Seely
 Email: lz50375@umbc.edu
 
-Requires: QtCreator, Python 3, qdarkstyle (https://github.com/ColinDuquesnoy/QDarkStyleSheet)
+Required to build: QtCreator, Python 3, qdarktheme (https://pypi.org/project/pyqtdarktheme/)
+
+Description: A desktop application made to track user inputted games using a SQLite database. Attributes included are: progress, hours played, start date, end date, genre(s), platform(s), total achievements, completed achievements, and a series the game belongs to. 

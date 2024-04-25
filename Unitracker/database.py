@@ -296,8 +296,55 @@ class database:
                     q_obj.bindValue(0, item["name"])
                     q_obj.bindValue(1, platforms[i])
                     rv = q_obj.exec()
-            elif (old_game.value("name") == item["name"]):
-                pass
+
+    def delete_item(self, name):
+        """
+        deletes the game with the given name
+        """
+        q_obj = QSqlQuery()
+        q_obj.prepare("SELECT * FROM game WHERE name=?")
+        q_obj.bindValue(0, name)
+        q_obj.exec()
+        q_obj.next()
+        old_game = q_obj.record()
+
+        q_obj.prepare("DELETE FROM game WHERE name=?")
+        q_obj.bindValue(0, name)
+        rv = q_obj.exec()
+        if not rv:
+            return False
+
+        # delete associated genres and platforms
+        q_obj.prepare("DELETE FROM genre WHERE game_name=?")
+        q_obj.bindValue(0, name)
+        rv = q_obj.exec()
+
+        q_obj.prepare("DELETE FROM platform WHERE game_name=?")
+        q_obj.bindValue(0, name)
+        q_obj.exec()
+
+        # update series
+        if (not old_game.isNull("series_name")):
+            q_obj.prepare("SELECT * FROM series WHERE name=?")
+            q_obj.bindValue(0, old_game.value("series_name"))
+            q_obj.exec()
+            q_obj.next()
+            old_series = q_obj.record()
+
+            if (old_series is not None and not old_series.isNull("num_games")):
+                if (old_series.value("num_games") - 1 > 0):
+                    old_hours = 0.0 if old_game.isNull("hours_played") else float(old_game.value("hours_played"))
+                    old_total = 0.0 if old_series.isNull("total_playtime") else float(old_series.value("total_playtime"))
+
+                    q_obj.prepare("UPDATE series SET num_games=?, total_playtime=? WHERE name=?")
+                    q_obj.bindValue(0, old_series.value("num_games") - 1)
+                    q_obj.bindValue(1, old_total - old_hours)
+                    q_obj.bindValue(2, old_game.value("series_name"))
+                    q_obj.exec()
+                else:
+                    q_obj.prepare("DELETE FROM series WHERE name=?")
+                    q_obj.bindValue(0, old_game.value("series_name"))
+                    q_obj.exec()
 
     def get_game(self, name):
         """
