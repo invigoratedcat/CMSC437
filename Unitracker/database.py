@@ -3,17 +3,17 @@ from PySide6.QtSql import QSqlDatabase, QSqlQuery, QSqlQueryModel
 from PySide6.QtCore import Qt, QSortFilterProxyModel
 import json
 import shutil
+import os
 
 
 class database:
-    def __init__(self):
-        self.files_path = "./"
+    def __init__(self, filepath="./"):
+        self.files_path = filepath
         self.db_name = self.files_path + "UnitrackerGames.sqlite"
         self.db = QSqlDatabase().addDatabase("QSQLITE")
         self.db.setDatabaseName(self.db_name)
 
         # name VARCHAR(25), progress INT(3), hours_played NUMERIC(30), start_date DATE, end_date DATE, total_achievements INT(20), completed_achievements INT(20), series_name VARCHAR(25)
-
         try:
             file = open(self.db_name, 'x')
             file.close()
@@ -70,9 +70,16 @@ class database:
 
             test_db.close()
             test_db.removeDatabase("test_connection")
+            try:
+                os.remove("test_connection")
+            except:
+                pass
 
             # overwrite the database
-            dst = shutil.copy(filename, self.db_name)
+            try:
+                dst = shutil.copy(filename, self.db_name)
+            except shutil.SameFileError:
+                return False
             return True
         except FileNotFoundError:
             return False
@@ -157,10 +164,8 @@ class database:
                 q_obj.bindValue(2, item["series_name"])
                 q_obj.exec()
 
-        # q_obj.prepare("INSERT INTO game (name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        # add the actual game
         q_obj.prepare(query)
-
-        # bind values
         for i, v in enumerate(item):
             q_obj.bindValue(i, item[v])
             # q_obj.bindValue(i, "NULL")
@@ -172,7 +177,7 @@ class database:
                 q_obj.prepare("INSERT INTO genre (game_name, name) VALUES (?, ?)")
                 q_obj.bindValue(0, item["name"])
                 q_obj.bindValue(1, genres[i])
-                rv = q_obj.exec()
+                q_obj.exec()
 
         # add platforms
         if (platforms is not None):
@@ -180,7 +185,7 @@ class database:
                 q_obj.prepare("INSERT INTO platform (game_name, name) VALUES (?, ?)")
                 q_obj.bindValue(0, item["name"])
                 q_obj.bindValue(1, platforms[i])
-                rv = q_obj.exec()
+                q_obj.exec()
 
         q_obj.finish()
         return rv
