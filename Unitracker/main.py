@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QGridLayout, QBoxLayout, QVBoxLayout, QPushButton,
 from PySide6.QtWidgets import QTableView, QHeaderView, QFrame, QRadioButton, QLineEdit
 from PySide6.QtWidgets import QMessageBox, QComboBox, QFileDialog
 from PySide6.QtCore import Qt, QSize, QFile
+from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtUiTools import QUiLoader
 from database import database
 import qdarktheme
@@ -26,11 +27,7 @@ class MainWindow(QMainWindow):
         self.update_font(1)
         self.current_menu = "games"
         self.menu_dict = {}
-
-        # db stuff
-        self.db = database()
-        if (not self.db.create_db()):
-            print("Database creation failed.")
+        self.files_path = "" # used for accessing the ui files
 
         # load and create menus
         self.create_navbar()
@@ -38,11 +35,15 @@ class MainWindow(QMainWindow):
         self.load_settings()
         self.load_add()
         self.load_edit()
+        self.load_help()
+        self.create_shortcuts()
 
-        test1 = {"name": "Final Fantasy", "progress": 75, "hours_played": 123}
-        print(self.db.add_item(test1))
-        print(self.db.db.lastError())
-        self.game_table.setModel(self.db.get_games())
+        # db stuff
+        self.db = database()
+        if (not self.db.create_db()):
+            QMessageBox.critical(self, "Database Error", "Database creation failed.")
+        else:
+            self.game_table.setModel(self.db.get_games())
 
     def create_games_menu(self):
         """
@@ -53,8 +54,8 @@ class MainWindow(QMainWindow):
         games_layout = QVBoxLayout()
         game_table = QTableView()
         self.game_table = game_table
-        model = self.db.get_games()        
-        game_table.setModel(model)
+        #model = self.db.get_games()
+        #game_table.setModel(model)
 
         # set view properties
         #game_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -82,13 +83,21 @@ class MainWindow(QMainWindow):
         """
         create/set all the keyboard shortcuts
         """
-        pass
+        exit = QShortcut(QKeySequence("Ctrl+Q"), self)
+        goto_games = QShortcut(QKeySequence("Alt+G"), self)
+        goto_add = QShortcut(QKeySequence("Alt+A"), self)
+        goto_settings = QShortcut(QKeySequence("Alt+S"), self)
+        goto_edit = QShortcut(QKeySequence("Alt+E"), self)
+        goto_delete = QShortcut(QKeySequence("Alt+D"), self)
+        goto_help = QShortcut(QKeySequence("Alt+H"), self)
 
-    def create_help(self):
-        """
-        create the help menu
-        """
-        pass
+        exit.activated.connect(sys.exit)
+        goto_games.activated.connect(self.show_games)
+        goto_add.activated.connect(self.show_add)
+        goto_settings.activated.connect(self.show_settings)
+        goto_edit.activated.connect(self.show_edit)
+        goto_delete.activated.connect(self.delete_game)
+        goto_help.activated.connect(self.show_help)
 
     def resizeEvent(self, event):
         #for i in range(self.db.MAX_VALUES):
@@ -108,12 +117,14 @@ class MainWindow(QMainWindow):
         edit_game = QPushButton("Edit Game")
         delete_game = QPushButton("Delete Game")
         settings = QPushButton("Settings")
+        help = QPushButton("Help")
 
         nav_bar.addWidget(games)
         nav_bar.addWidget(add_game)
         nav_bar.addWidget(edit_game)
         nav_bar.addWidget(delete_game)
         nav_bar.addWidget(settings)
+        nav_bar.addWidget(help)
 
         # connect functionality
         settings.clicked.connect(self.show_settings)
@@ -121,6 +132,7 @@ class MainWindow(QMainWindow):
         add_game.clicked.connect(self.show_add)
         edit_game.clicked.connect(self.show_edit)
         delete_game.clicked.connect(self.delete_game)
+        help.clicked.connect(self.show_help)
 
         self.main_scene.addLayout(nav_bar)
         self.main_scene.setStretchFactor(nav_bar, 0)
@@ -151,6 +163,9 @@ class MainWindow(QMainWindow):
             QLabel#title {
                 font-size: 16px;
             }
+            QTextBrowser#help_text {
+                font-size: 12px;
+            }
             """
         elif (size == "medium"):
             self.font_qss = """
@@ -159,6 +174,9 @@ class MainWindow(QMainWindow):
             }
             QLabel#title {
                 font-size: 20px;
+            }
+            QTextBrowser#help_text {
+                font-size: 14px;
             }
             """
         elif (size == "large"):
@@ -169,22 +187,58 @@ class MainWindow(QMainWindow):
             QLabel#title {
                 font-size: 26px;
             }
+            QTextBrowser#help_text {
+                font-size: 18px;
+            }
             """
         qdarktheme.setup_theme(self.current_theme, additional_qss=self.font_qss)
 
     def start_import(self):
-        file_name = QFileDialog.getOpenFileName(self.menu_dict["settings"], "Choose import file", "~/", "Unitracker games (*.sqlite *.xml *.json)")
+        file_name = QFileDialog.getOpenFileName(self.menu_dict["settings"], "Choose import file", "~/", "(*.sqlite *.xml *.json)")
         chosen = self.menu_dict["settings"].findChild(QLabel, "chosen_import")
         chosen.setText(file_name[0])
 
     def finish_import(self):
         chosen = self.menu_dict["settings"].findChild(QLabel, "chosen_import")
         to_import = chosen.text()
-        print("Import result:", self.db.import_db(to_import))
+        print("to_import:", to_import[-6:])
+        success = False
+        if (to_import[-6:] == "sqlite"):
+            #print("Import result:", self.db.import_db(to_import))
+            if (self.db.import_db(to_import)):
+                success = True
+        elif (to_import[-3:] == "xml"):
+            pass
+        elif (to_import[-4:] == "json"):
+            pass
+        else:
+            msg = QMessageBox.critical(self, "Import Error", "Unsupported file format selected.")
+            return
 
+        if (success):
+            QMessageBox.information(self, "Import Success", "Games successfully imported!")
+            self.game_table.setModel(self.db.get_games())
+        else:
+            QMessageBox.critical(self, "Import Error", "Import failed")
 
     def start_export(self):
-        file_name = QFileDialog.getSaveFileName(self.menu_dict["settings"], "Choose export file", "~/", " Unitracker games (*.sqlite *.xml *.json)")
+        file_name = QFileDialog.getSaveFileName(self.menu_dict["settings"], "Choose export file", "~/", "(*.sqlite *.xml *.json)")
+        success = False
+        if (file_name[-6:] == "sqlite"):
+            pass
+            #print("Import result:", self.db.import_db(to_import))
+            if (self.db.export_db(file_name)):
+                success = True
+        elif (file_name[-3:] == "xml"):
+            pass
+        elif (file_name[-4:] == "json"):
+            pass
+        else:
+            pass
+        if (success):
+            QMessageBox.information(self, "Export Success", "Games successfully exported!")
+        else:
+            QMessageBox.critical(self, "Export Error", "Export failed")
 
     def add_game(self):
         """
@@ -201,9 +255,9 @@ class MainWindow(QMainWindow):
                 f = obj.text()
                 obj.clear()
                 if (v == "genre"):
-                   f = f.split(',')
-                   if (len(f[0]) > 0):
-                       genres = f
+                    f = f.split(',')
+                    if (len(f[0]) > 0):
+                        genres = f
                 elif (v == "platform"):
                     f = f.split(',')
                     if (len(f[0]) > 0):
@@ -229,11 +283,12 @@ class MainWindow(QMainWindow):
                 f = obj.text()
                 obj.clear()
                 if (v == "genre"):
-                   f = f.split(',')
-                   for i in range(len(f)):
-                       f[i] = f[i].strip()
-                   if (len(f[0]) > 0):
-                       genres = f
+                    # convert comma separated list to actual list
+                    f = f.split(',')
+                    for i in range(len(f)):
+                        f[i] = f[i].strip()
+                        if (len(f[0]) > 0):
+                            genres = f
                 elif (v == "platform"):
                     f = f.split(',')
                     for i in range(len(f)):
@@ -251,11 +306,16 @@ class MainWindow(QMainWindow):
         """
         Prompts user for confirmation, then deletes the selected games if user confirms
         """
+        # Don't allow the user to delete a game unless they're on the games menu
+        if (not self.current_menu == "games"):
+            return
+
         selected_indexes = self.game_table.selectionModel().selectedIndexes()
         selected_rows = sorted(set(i.row() for i in selected_indexes))
+
         if (len(selected_rows) < 1):
             msg = QMessageBox.critical(self, "Delete Error", "No game selected; please choose at least one game to delete and try again.")
-
+        # try to delete multiple games
         elif (len(selected_rows) > 1):
             game_names = ""
             to_delete = []
@@ -270,7 +330,7 @@ class MainWindow(QMainWindow):
                 for i in range(len(to_delete)):
                     self.db.delete_item(to_delete[i])
                 self.game_table.setModel(self.db.get_games())
-
+        # try to delete one game
         else:
             row = selected_rows[0]
             game_name = self.game_table.model().index(row, 0).data()
@@ -285,7 +345,7 @@ class MainWindow(QMainWindow):
         loads the settings menu and connects functions to buttons
         """
         if ("settings" not in self.menu_dict):
-            settings_ui = QFile("settings.ui")
+            settings_ui = QFile(self.files_path + "settings.ui")
             loader = QUiLoader()
             s = loader.load(settings_ui)
             settings_ui.close()
@@ -306,6 +366,7 @@ class MainWindow(QMainWindow):
             start_import = s.findChild(QPushButton, "import_button")
             select_import = s.findChild(QPushButton, "select_import")
             start_export = s.findChild(QPushButton, "export_button")
+
             set_light.clicked.connect(self.set_light)
             set_dark.clicked.connect(self.set_dark)
             set_system.clicked.connect(self.set_system)
@@ -314,6 +375,22 @@ class MainWindow(QMainWindow):
             start_import.clicked.connect(self.finish_import)
             start_export.clicked.connect(self.start_export)
 
+    def load_help(self):
+        """
+        load the help menu
+        """
+        if ("help" not in self.menu_dict):
+            help_ui = QFile(self.files_path + "help.ui")
+            loader = QUiLoader()
+            h = loader.load(help_ui)
+            help_ui.close()
+            if not h:
+                print(loader.errorString())
+                sys.exit(-1)
+            h.hide()
+            self.main_scene.addWidget(h)
+            self.main_scene.setStretchFactor(h, 1)
+            self.menu_dict["help"] = h
 
     def load_edit(self):
         """
@@ -321,7 +398,7 @@ class MainWindow(QMainWindow):
         """
         if ("edit_game" not in self.menu_dict):
             # load add_game ui file, then modify it
-            edit_game_ui = QFile("add_game.ui")
+            edit_game_ui = QFile(self.files_path + "add_game.ui")
             loader = QUiLoader()
             edit = loader.load(edit_game_ui)
             edit_game_ui.close()
@@ -363,7 +440,7 @@ class MainWindow(QMainWindow):
         loads the add game menu and connects function to button
         """
         if ("add_game" not in self.menu_dict):
-            add_game_ui = QFile("add_game.ui")
+            add_game_ui = QFile(self.files_path + "add_game.ui")
             loader = QUiLoader()
             add = loader.load(add_game_ui)
             add_game_ui.close()
@@ -414,7 +491,7 @@ class MainWindow(QMainWindow):
         selected_rows = sorted(set(i.row() for i in selected_indexes))
 
         if (len(selected_rows) > 1):
-            msg = QMessageBox()
+            msg = QMessageBox
             msg.setText("More than one game selected; please select exactly one game for editing.")
             msg.exec()
         elif (len(selected_rows) == 0):
@@ -460,6 +537,12 @@ class MainWindow(QMainWindow):
             self.menu_dict[self.current_menu].hide()
             self.current_menu = "settings"
             self.menu_dict["settings"].show()
+
+    def show_help(self):
+        if (not self.current_menu == "help"):
+            self.menu_dict[self.current_menu].hide()
+            self.current_menu = "help"
+            self.menu_dict["help"].show()
 
 
 if __name__ == "__main__":

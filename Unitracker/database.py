@@ -1,17 +1,18 @@
 # This Python file uses the following encoding: utf-8
 from PySide6.QtSql import QSqlDatabase, QSqlQuery, QSqlQueryModel
 from PySide6.QtCore import Qt, QSortFilterProxyModel
-import os
+import json
+import shutil
 
 
 class database:
     def __init__(self):
-        self.db_name = "./UnitrackerGames.sqlite"
+        self.files_path = "./"
+        self.db_name = self.files_path + "UnitrackerGames.sqlite"
         self.db = QSqlDatabase().addDatabase("QSQLITE")
         self.db.setDatabaseName(self.db_name)
 
         # name VARCHAR(25), progress INT(3), hours_played NUMERIC(30), start_date DATE, end_date DATE, total_achievements INT(20), completed_achievements INT(20), series_name VARCHAR(25)
-        self.MAX_VALUES = 8
 
         try:
             file = open(self.db_name, 'x')
@@ -23,7 +24,7 @@ class database:
         if not self.db.isOpen():
             self.db.open()
         # load file
-        f = open("createDB.sql")
+        f = open(self.files_path + "createDB.sql")
         cmds = []
         s = f.readline()
         while (len(s) > 0):
@@ -44,6 +45,7 @@ class database:
         given a .sqlite filename, will check if it has the valid table and attribute setup
         before overwriting the current database with it
         """
+        print(filename)
         try:
             file = open(filename, 'r')
             file.close()
@@ -55,28 +57,34 @@ class database:
             q_test = QSqlQuery("test_connection")
             q_test.prepare("SELECT name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name FROM game")
             if (not q_test.exec()):
-                print("game table error")
                 return False
 
             if not (q_test.exec("SELECT game_name, name FROM genre")):
-                print("genre table error")
                 return False
 
             if not (q_test.exec("SELECT game_name, name FROM platform")):
-                print("platform table error")
                 return False
 
             if (not q_test.exec("SELECT name, num_games, total_playtime FROM series")):
-                print("series table error")
                 return False
 
             test_db.close()
             test_db.removeDatabase("test_connection")
 
-            # TODO: overwrite the database
+            # overwrite the database
+            dst = shutil.copy(filename, self.db_name)
             return True
         except FileNotFoundError:
             return False
+
+    def import_json(self, filename):
+        pass
+
+    def export_db(self, filename):
+        return shutil.copy(self.db_name, filename)
+
+    def export_json(self, filename):
+        pass
 
     def get_games(self):
         """
