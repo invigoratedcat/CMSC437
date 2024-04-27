@@ -31,6 +31,7 @@ class MainWindow(QMainWindow):
         # load and create menus
         self.create_navbar()
         self.create_games_menu()
+        self.create_series_menu()
         self.load_settings()
         self.load_config()
 
@@ -45,11 +46,11 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Database Error", "Database creation failed.")
         else:
             self.game_table.setModel(self.db.get_games())
+            self.series_table.setModel(self.db.get_series())
 
     def create_games_menu(self):
         """
         construct and show the table of games;
-        takes the main window as argument
         """
         games_frame = QFrame()
         games_layout = QVBoxLayout()
@@ -57,9 +58,8 @@ class MainWindow(QMainWindow):
         self.game_table = game_table
 
         # set view properties
-        #game_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         game_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        #game_table.horizontalHeader().setStretchLastSection(1)
+        game_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
         game_table.verticalHeader().hide()
         game_table.setGridStyle(Qt.SolidLine)
         game_table.setSortingEnabled(True)
@@ -75,6 +75,29 @@ class MainWindow(QMainWindow):
 
         self.menu_dict["games"] = games_frame
         self.main_scene.addWidget(games_frame)
+
+    def create_series_menu(self):
+        """
+        construct and show the table of series
+        """
+        series_frame = QFrame()
+        series_layout = QVBoxLayout()
+        series_table = QTableView()
+        self.series_table = series_table
+
+        series_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        series_table.verticalHeader().hide()
+        series_table.setSortingEnabled(True)
+        series_table.sortByColumn(0, Qt.DescendingOrder)
+
+        title = QLabel("Series")
+        series_layout.addWidget(title)
+        series_layout.addWidget(series_table)
+        series_frame.setLayout(series_layout)
+        series_frame.hide()
+
+        self.menu_dict["series"] = series_frame
+        self.main_scene.addWidget(series_frame)
 
     def save_config(self):
         """
@@ -114,6 +137,7 @@ class MainWindow(QMainWindow):
         """
         exit = QShortcut(QKeySequence("Ctrl+Q"), self)
         goto_games = QShortcut(QKeySequence("Alt+G"), self)
+        goto_series = QShortcut(QKeySequence("Alt+R"), self)
         goto_add = QShortcut(QKeySequence("Alt+A"), self)
         goto_settings = QShortcut(QKeySequence("Alt+S"), self)
         goto_edit = QShortcut(QKeySequence("Alt+E"), self)
@@ -122,6 +146,7 @@ class MainWindow(QMainWindow):
 
         exit.activated.connect(sys.exit)
         goto_games.activated.connect(self.show_games)
+        goto_series.activated.connect(self.show_series)
         goto_add.activated.connect(self.show_add)
         goto_settings.activated.connect(self.show_settings)
         goto_edit.activated.connect(self.show_edit)
@@ -136,6 +161,7 @@ class MainWindow(QMainWindow):
 
         # create buttons
         games = QPushButton("Games")
+        series = QPushButton("Series")
         add_game = QPushButton("Add Game")
         edit_game = QPushButton("Edit Game")
         delete_game = QPushButton("Delete Game")
@@ -143,6 +169,7 @@ class MainWindow(QMainWindow):
         help = QPushButton("Help")
 
         nav_bar.addWidget(games)
+        nav_bar.addWidget(series)
         nav_bar.addWidget(add_game)
         nav_bar.addWidget(edit_game)
         nav_bar.addWidget(delete_game)
@@ -152,6 +179,7 @@ class MainWindow(QMainWindow):
         # connect functionality
         settings.clicked.connect(self.show_settings)
         games.clicked.connect(self.show_games)
+        series.clicked.connect(self.show_series)
         add_game.clicked.connect(self.show_add)
         edit_game.clicked.connect(self.show_edit)
         delete_game.clicked.connect(self.delete_game)
@@ -238,7 +266,6 @@ class MainWindow(QMainWindow):
     def finish_import(self):
         chosen = self.menu_dict["settings"].findChild(QLabel, "chosen_import")
         to_import = chosen.text()
-        print("to_import:", to_import[-6:])
         success = False
         if (to_import[-6:] == "sqlite"):
             #print("Import result:", self.db.import_db(to_import))
@@ -247,7 +274,8 @@ class MainWindow(QMainWindow):
         elif (to_import[-3:] == "xml"):
             pass
         elif (to_import[-4:] == "json"):
-            pass
+            if (self.db.import_json(to_import)):
+                success = True
         else:
             msg = QMessageBox.critical(self, "Import Error", "Unsupported file format selected.")
             return
@@ -255,23 +283,21 @@ class MainWindow(QMainWindow):
         if (success):
             QMessageBox.information(self, "Import Success", "Games successfully imported!")
             self.game_table.setModel(self.db.get_games())
+            self.series_table.setModel(self.db.get_series())
         else:
             QMessageBox.critical(self, "Import Error", "Import failed")
 
     def start_export(self):
-        file_name = QFileDialog.getSaveFileName(self.menu_dict["settings"], "Choose export file", "~/", "(*.sqlite *.xml *.json)")
+        file_name = QFileDialog.getSaveFileName(self.menu_dict["settings"], "Choose export file", "~/", "(*.sqlite *.xml *.json)")[0]
         success = False
         if (file_name[-6:] == "sqlite"):
-            pass
-            #print("Import result:", self.db.import_db(to_import))
             if (self.db.export_db(file_name)):
                 success = True
         elif (file_name[-3:] == "xml"):
             pass
         elif (file_name[-4:] == "json"):
-            pass
-        else:
-            pass
+            if (self.db.export_json(file_name)):
+                success = True
         if (success):
             QMessageBox.information(self, "Export Success", "Games successfully exported!")
         else:
@@ -305,6 +331,7 @@ class MainWindow(QMainWindow):
         if (not self.db.add_item(game, genres, platforms)):
             QMessageBox.critical(self, "Add Error", "Game was not successfully added")
         self.game_table.setModel(self.db.get_games())
+        self.series_table.setModel(self.db.get_series())
 
     def edit_game(self):
         """
@@ -338,6 +365,7 @@ class MainWindow(QMainWindow):
 
         self.db.edit_item(self.old_game_name, game, genres, platforms)
         self.game_table.setModel(self.db.get_games())
+        self.series_table.setModel(self.db.get_series())
         self.show_games()
 
     def delete_game(self):
@@ -368,6 +396,7 @@ class MainWindow(QMainWindow):
                 for i in range(len(to_delete)):
                     self.db.delete_item(to_delete[i])
                 self.game_table.setModel(self.db.get_games())
+                self.series_table.setModel(self.db.get_series())
         # try to delete one game
         else:
             row = selected_rows[0]
@@ -377,6 +406,7 @@ class MainWindow(QMainWindow):
             if (msg == QMessageBox.Yes):
                 self.db.delete_item(game_name)
                 self.game_table.setModel(self.db.get_games())
+                self.series_table.setModel(self.db.get_series())
 
     def load_settings(self):
         """
@@ -513,6 +543,12 @@ class MainWindow(QMainWindow):
             self.current_menu = "games"
             self.menu_dict["games"].show()
 
+    def show_series(self):
+        if (not self.current_menu == "series"):
+            self.menu_dict[self.current_menu].hide()
+            self.current_menu = "series"
+            self.menu_dict["series"].show()
+
     def show_add(self):
         if (not self.current_menu == "add_game"):
             self.menu_dict[self.current_menu].hide()
@@ -592,6 +628,3 @@ if __name__ == "__main__":
     main_window.setMinimumWidth(720)
     main_window.show()
     sys.exit(app.exec())
-
-
-

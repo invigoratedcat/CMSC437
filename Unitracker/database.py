@@ -10,7 +10,7 @@ class database:
     def __init__(self, filepath="./"):
         self.files_path = filepath
         self.db_name = self.files_path + "UnitrackerGames.sqlite"
-        self.db = QSqlDatabase().addDatabase("QSQLITE")
+        self.db = QSqlDatabase.addDatabase("QSQLITE")
         self.db.setDatabaseName(self.db_name)
 
         # name VARCHAR(25), progress INT(3), hours_played NUMERIC(30), start_date DATE, end_date DATE, total_achievements INT(20), completed_achievements INT(20), series_name VARCHAR(25)
@@ -20,9 +20,14 @@ class database:
         except FileExistsError:
             pass
 
-    def create_db(self):
-        if not self.db.isOpen():
-            self.db.open()
+    def create_db(self, db=None):
+        """
+        creates the main database
+        """
+        con = self.db if db is None else db
+        if not con.isOpen():
+            con.open()
+
         # load file
         f = open(self.files_path + "createDB.sql")
         cmds = []
@@ -31,11 +36,12 @@ class database:
             if not s.isspace():
                 cmds.append(s[:-2])
             s = f.readline()
+
         # execute creation queries
         for i in cmds:
-            q = QSqlQuery(i)
+            q = QSqlQuery(con)
+            q.prepare(i)
             if not q.exec():
-                print(self.db.lastError())
                 return False
         f.close()
         return True
@@ -45,35 +51,45 @@ class database:
         given a .sqlite filename, will check if it has the valid table and attribute setup
         before overwriting the current database with it
         """
-        print(filename)
         try:
             file = open(filename, 'r')
             file.close()
-            test_db = self.db.addDatabase("QSQLITE", filename)
-            test_db.setDatabaseName("test_connection")
+            CONNECTION = "test_connection"
+            test_db = QSqlDatabase.addDatabase("QSQLITE", CONNECTION)
+            test_db.setDatabaseName(filename)
             test_db.open()
 
             # test that each table exists and has all the attributes
-            q_test = QSqlQuery("test_connection")
+            q_test = QSqlQuery(test_db)
             q_test.prepare("SELECT name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name FROM game")
             if (not q_test.exec()):
+                test_db.close()
+                del test_db
+                QSqlDatabase.removeDatabase(CONNECTION)
                 return False
 
             if not (q_test.exec("SELECT game_name, name FROM genre")):
+                test_db.close()
+                del test_db
+                QSqlDatabase.removeDatabase(CONNECTION)
                 return False
 
             if not (q_test.exec("SELECT game_name, name FROM platform")):
+                test_db.close()
+                del test_db
+                QSqlDatabase.removeDatabase(CONNECTION)
                 return False
 
             if (not q_test.exec("SELECT name, num_games, total_playtime FROM series")):
+                test_db.close()
+                del test_db
+                QSqlDatabase.removeDatabase(CONNECTION)
                 return False
 
+            q_test.finish()
             test_db.close()
-            test_db.removeDatabase("test_connection")
-            try:
-                os.remove("test_connection")
-            except:
-                pass
+            del test_db
+            QSqlDatabase.removeDatabase(CONNECTION)
 
             # overwrite the database
             try:
@@ -85,19 +101,193 @@ class database:
             return False
 
     def import_json(self, filename):
-        pass
+        """
+        given a json file name, creates a temporary database, populates it,
+        then replaces the current database with it
+        """
+        try:
+            with open(filename) as f:
+                to_import = json.load(f)
+
+            # create temp database for importing
+            CONNECTION = "temp_connection"
+            TEMP_NAME = "JSONImport"
+            temp_db = self.db.addDatabase("QSQLITE", CONNECTION)
+            temp_db.setDatabaseName(TEMP_NAME + ".sqlite")
+
+            # cleanup and return False if temp_db could not be created
+            if (not self.create_db(db=temp_db)):
+                temp_db.close()
+                del temp_db
+                self.remove_db(CONNECTION, TEMP_NAME)
+                return False
+            q = QSqlQuery(temp_db)
+
+            # import series
+            for i in range(len(to_import["series"])):
+                q.prepare("INSERT INTO series VALUES (?, ?, ?)")
+                q.bindValue(0, to_import["series"][i]["name"])
+                q.bindValue(1, int(to_import["series"][i]["num_games"]))
+                q.bindValue(2, float(to_import["series"][i]["total_playtime"]))
+                if (not q.exec()):
+                    temp_db.close()
+                    del temp_db
+                    self.remove_db(CONNECTION, TEMP_NAME)
+                    return False
+
+            # import games
+            for i in range(len(to_import["games"])):
+                query = "INSERT INTO game ("
+                num_fields = len(to_import["games"][i])
+                # set up the query string
+                for v in to_import["games"][i]:
+                    query += v + ","
+
+                query = query [:len(query) - 1] + ")"
+                query += " VALUES ("
+                for j in range(num_fields):
+                    if (j != num_fields - 1):
+                        query += "?, "
+                    else:
+                        query += "?)"
+                q.prepare(query)
+
+                # bind values
+                for j, k in enumerate(to_import["games"][i]):
+                    q.bindValue(j, to_import["games"][i][k])
+
+                if (not q.exec()):
+                    temp_db.close()
+                    del temp_db
+                    self.remove_db(CONNECTION, TEMP_NAME)
+                    return False
+
+            # import genres
+            for i in range(len(to_import["genres"])):
+                q.prepare("INSERT INTO genre VALUES (?, ?)")
+                q.bindValue(0, to_import["genres"][i]["game_name"])
+                q.bindValue(1, to_import["genres"][i]["name"])
+                if (not q.exec()):
+                    temp_db.close()
+                    del temp_db
+                    self.remove_db(CONNECTION, TEMP_NAME)
+                    return False
+
+            # import platforms
+            for i in range(len(to_import["platforms"])):
+                q.prepare("INSERT INTO platform VALUES (?, ?)")
+                q.bindValue(0, to_import["platforms"][i]["game_name"])
+                q.bindValue(1, to_import["platforms"][i]["name"])
+                if (not q.exec()):
+                    temp_db.close()
+                    del temp_db
+                    self.remove_db(CONNECTION, TEMP_NAME)
+                    return False
+
+            # copy the database over
+            try:
+                dst = shutil.copy("JSONImport.sqlite", self.db_name)
+            except shutil.SameFileError:
+                temp_db.close()
+                del temp_db
+                self.remove_db(CONNECTION, TEMP_NAME)
+                return False
+
+            # cleanup
+            temp_db.close()
+            del temp_db
+            self.remove_db(CONNECTION, TEMP_NAME)
+            return True
+        except FileNotFoundError:
+            return False
+
+    def remove_db(self, con_name, db_name):
+        """
+        removes the given database and its file
+        """
+        QSqlDatabase.removeDatabase(con_name)
+        try:
+            f = db_name + ".sqlite"
+            os.remove(f)
+        except FileNotFoundError:
+            pass
 
     def export_db(self, filename):
         return shutil.copy(self.db_name, filename)
 
     def export_json(self, filename):
-        pass
+        """
+        exports the database as a json file
+        """
+        games = []
+        genres = []
+        platforms = []
+        series = []
+        q = QSqlQuery()
+        q.prepare("SELECT * FROM game")
+        if (not q.exec() or q.record().count() < 1):
+            print("game select error")
+            return False
+
+        # convert game records to list of dictionaries
+        while (q.next()):
+            game = q.record()
+            dict = {}
+            for i in range(game.count()):
+                f = game.field(i).name()
+                dict[f] = game.value(f)
+            games.append(dict)
+
+        q.prepare("SELECT * FROM genre")
+        if (not q.exec() or q.record().count() < 1):
+            print("genre select error")
+            return False
+
+        # convert genre records to list of dicts
+        while (q.next()):
+            genre = q.record()
+            dict = {}
+            for i in range(genre.count()):
+                f = genre.field(i).name()
+                dict[f] = genre.value(f)
+            genres.append(dict)
+
+        q.prepare("SELECT * FROM platform")
+        if (not q.exec() or q.record().count() < 1):
+            print("platform select error")
+            return False
+        # convert platform records to list of dicts
+        while (q.next()):
+            platform = q.record()
+            dict = {}
+            for i in range(platform.count()):
+                f = platform.field(i).name()
+                dict[f] = platform.value(f)
+            platforms.append(dict)
+
+        q.prepare("SELECT * FROM series")
+        if (not q.exec() or q.record().count() < 1):
+            print("series select error")
+            return False
+        # convert series records to list of dicts
+        while (q.next()):
+            s = q.record()
+            dict = {}
+            for i in range(s.count()):
+                f = s.field(i).name()
+                dict[f] = s.value(f)
+            series.append(dict)
+        to_export = {"games": games, "genres": genres, "platforms": platforms, "series": series}
+        with open(filename, 'w') as fp:
+            json.dump(to_export, fp)
+        return True
 
     def get_games(self):
         """
-        return a QSqlQueryModel with all the game records
+        return a QSortFilterProxyModel with a QSqlQueryModel as its source model,
+        which contains all the game records joined with genre and platform records
         """
-        headers = ["Name","Progress", "Hours Played", "Start Date", "End Date", "Total\nAchievements", "Completed\nAchievements", "Series name", "Genre", "Platform"]
+        headers = ["Name","Progress (%)", "Hours\nPlayed", "Start Date", "End\nDate", "Total\nAchievements", "Completed\nAchievements", "Series\nName", "Genre", "Platform"]
         model = QSqlQueryModel()
         q = "WITH genres AS (SELECT * FROM genre) platforms AS (SELECT * FROM platform)"
         # name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name, genre.name AS genre
@@ -112,10 +302,25 @@ class database:
         for i in range(len(headers)):
             model.setHeaderData(i, Qt.Horizontal, headers[i])
 
-        proxyModel = QSortFilterProxyModel()
-        proxyModel.setSourceModel(model)
+        proxy = QSortFilterProxyModel()
+        proxy.setSourceModel(model)
+        return proxy
 
-        return proxyModel
+    def get_series(self):
+        """
+        return a QSortFilterProxyModel with a QSqlQueryModel as its source model,
+        which contains all the series records
+        """
+        headers = ["Name", "Number of\nGames", "Total Hours\nPlayed"]
+        model = QSqlQueryModel()
+        model.setQuery("SELECT * FROM series")
+
+        for i in range(len(headers)):
+            model.setHeaderData(i, Qt.Horizontal, headers[i])
+
+        proxy = QSortFilterProxyModel()
+        proxy.setSourceModel(model)
+        return proxy
 
     def add_item(self, item, genres=None, platforms=None):
         """
@@ -149,7 +354,7 @@ class database:
             q_obj.next()
             old_series = q_obj.record()
 
-            if (old_series.isNull("series_name")):
+            if (old_series.isNull("name")):
                 # series doesn't exist so just add it
                 q_obj.prepare("INSERT INTO series (name, num_games, total_playtime) VALUES (?, ?, ?)")
                 q_obj.bindValue(0, item["series_name"])
@@ -221,8 +426,7 @@ class database:
                 q_obj.bindValue(i + 1, item["name"])
         rv = q_obj.exec()
         if (not rv):
-            # TODO: display error message?
-            print(self.db.lastError())
+            return False
 
         # add new series
         if ("series_name" in item.keys()):
@@ -309,6 +513,7 @@ class database:
                     q_obj.bindValue(0, item["name"])
                     q_obj.bindValue(1, platforms[i])
                     rv = q_obj.exec()
+        return rv
 
     def delete_item(self, name):
         """
