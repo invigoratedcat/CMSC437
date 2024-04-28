@@ -8,6 +8,12 @@ Email: lz50375@umbc.edu
 
 Required to build: Qt6, PySide6, Python 3, qdarktheme (https://pypi.org/project/pyqtdarktheme/)
 
+To Run:
+1. Download the Unitracker v1.0 (Linux) zip file
+2. Extract it somewhere
+3. Run main
+
+
 Description: A desktop application made to track user inputted games using a SQLite database. Attributes included are: progress, hours played, start date, end date, genre(s), platform(s), total achievements, completed achievements, and a series the game belongs to.
 
 Features:
@@ -19,6 +25,8 @@ Features:
   - total achievements and completed achievements
   - put in the genre(s) you think they are
   - put in the platform(s) you've played them on
+- search bar for the games
+  - can filter by each column
 - menus to view series and games tables
  - can sort the tables in ascending/descending order of chosen columns
 - pages for games
@@ -35,6 +43,8 @@ Features:
 - tab selecting
 - help menu describing how to do everything
 - tooltips to help you remember what each button does
+<br>
+
 Future ideas:
 - Choose to use Steam to easily fill in data from Steam's database when adding/editing games
   - maybe use https://github.com/ValvePython/steam

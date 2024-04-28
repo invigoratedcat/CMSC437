@@ -13,8 +13,8 @@ class database:
         self.db_name = self.files_path + "UnitrackerGames.sqlite"
         self.db = QSqlDatabase.addDatabase("QSQLITE")
         self.db.setDatabaseName(self.db_name)
-        self.DEFAULT_IPP = 5
-        self.items_per_page = 5
+        self.DEFAULT_IPP = 10
+        self.items_per_page = self.DEFAULT_IPP
         self.current_page = 0
 
         try:

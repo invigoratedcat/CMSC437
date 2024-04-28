@@ -12,6 +12,7 @@ from PySide6.QtGui import QShortcut, QKeySequence, QIntValidator
 from PySide6.QtUiTools import QUiLoader
 from database import database
 
+sys.settrace
 
 class MainWindow(QMainWindow):
     def __init__(self, app):
@@ -34,45 +35,73 @@ class MainWindow(QMainWindow):
         self.create_navbar()
         self.create_games_menu()
         self.create_series_menu()
-        self.load_settings()
 
+        self.load_settings()
         self.load_add()
         self.load_edit()
         self.load_help()
         self.create_shortcuts()
 
-        # db stuff
+
+        # initialize database handler
         self.db = database(self.files_path)
         if (not self.db.create_db()):
             QMessageBox.critical(self, "Database Error", "Database creation failed.")
             sys.exit(-1)
         else:
+            # load config, set up games and series tables, page bar
             self.load_config()
             self.game_table.setModel(self.db.get_games())
             self.game_table.model().setFilterCaseSensitivity(Qt.CaseInsensitive)
             self.series_table.setModel(self.db.get_series())
             self.update_page_bar()
 
+
     def create_games_menu(self):
         """
-        construct and show the table of games;
+        construct and show the menu containing the games table, search bar, and page bar
         """
         games_frame = QFrame()
         games_layout = QVBoxLayout()
-        game_table = QTableView()
-        self.game_table = game_table
+        self.game_table = QTableView()
 
         # set view properties
-        game_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        game_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        game_table.verticalHeader().hide()
-        game_table.setGridStyle(Qt.SolidLine)
-        game_table.setSortingEnabled(True)
-        game_table.sortByColumn(0, Qt.DescendingOrder) # set default order to descending by game name
+        self.game_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.game_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.game_table.verticalHeader().hide()
+        self.game_table.setGridStyle(Qt.SolidLine)
+        self.game_table.setSortingEnabled(True)
+        self.game_table.sortByColumn(0, Qt.DescendingOrder) # set default order to descending by game name
 
-        # make title, page buttons and label
+        # make title
         title = QLabel("Games")
         title.setAlignment(Qt.AlignCenter)
+
+        # create page bar
+        page_layout = self.create_page_bar()
+
+        # add search bar
+        self.create_search_box()
+
+        self.game_search["options"].buttonPressed.connect(self.set_game_filter)
+        self.game_search["bar"].returnPressed.connect(self.search_games)
+
+        # connect everything
+        games_layout.addWidget(title)
+        games_layout.addLayout(self.game_search["box"])
+        games_layout.addWidget(self.game_table)
+        games_layout.addLayout(page_layout)
+        games_frame.setLayout(games_layout)
+
+        self.menu_dict["games"] = games_frame
+        self.main_scene.addWidget(games_frame)
+
+
+    def create_page_bar(self):
+        """
+        creates the page bar ui and sets up the functionality
+        """
+
         page_label = QLabel("Page 1")
         page_label.setAlignment(Qt.AlignCenter)
         next_page = QPushButton("Next")
@@ -84,23 +113,35 @@ class MainWindow(QMainWindow):
         self.page_bar["previous"] = previous_page
         self.page_bar["label"] = page_label
 
-        horizontal_spacer = QSpacerItem(20, 40, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        page_layout.addItem(horizontal_spacer)
+        h_spacer1 = QSpacerItem(20, 40, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        h_spacer2 = QSpacerItem(20, 40, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        page_layout.addItem(h_spacer1)
         page_layout.addWidget(previous_page, 0, 1)
         page_layout.addWidget(page_label, 0, 2)
         page_layout.addWidget(next_page, 0, 3)
-        page_layout.addItem(horizontal_spacer, 0, 4)
+        page_layout.addItem(h_spacer2, 0, 4)
 
-        # add search bar
+        next_page.clicked.connect(self.next_page)
+        previous_page.clicked.connect(self.previous_page)
+
+        return page_layout
+
+    def create_search_box(self):
+        """
+        creates the search bar ui
+        """
         self.game_search["bar"] = QLineEdit()
         self.game_search["bar"].setToolTip("Enter what you want to search here")
         self.game_search["options"] = QButtonGroup()
+
         search_label = QLabel("Search\nGames:")
         search_label.setAlignment(Qt.AlignRight)
         search_box = QGridLayout()
+        self.game_search["box"] = search_box
         option_label = QLabel("Search by:")
         option_label.setAlignment(Qt.AlignRight)
 
+        # filter options
         search_name = QRadioButton("Name")
         search_prog = QRadioButton("Progress")
         search_hours = QRadioButton("Hours\nPlayed")
@@ -124,23 +165,6 @@ class MainWindow(QMainWindow):
                 sbl[i].setChecked(True)
             sbl[i - 1].setToolTip("Filter by " + sbl[i - 1].text())
             search_box.addWidget(sbl[i - 1], 1, i)
-
-        self.game_search["options"].buttonPressed.connect(self.set_game_filter)
-        self.game_search["bar"].returnPressed.connect(self.search_games)
-
-        # connect everything
-        game_table.setVisible(True)
-        games_layout.addWidget(title)
-        games_layout.addLayout(search_box)
-        games_layout.addWidget(game_table)
-        games_layout.addLayout(page_layout)
-        games_frame.setLayout(games_layout)
-
-        self.menu_dict["games"] = games_frame
-        self.main_scene.addWidget(games_frame)
-
-        next_page.clicked.connect(self.next_page)
-        previous_page.clicked.connect(self.previous_page)
 
     def create_series_menu(self):
         """
@@ -842,12 +866,12 @@ class MainWindow(QMainWindow):
             self.current_menu = "help"
             self.menu_dict["help"].show()
 
-
 if __name__ == "__main__":
     QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_ShareOpenGLContexts, True)
     app = QApplication()
 
     main_window = MainWindow(app)
+    main_window.setAttribute(Qt.WA_DeleteOnClose, True)
 
     main_window.setMinimumHeight(480)
     main_window.setMinimumWidth(720)
