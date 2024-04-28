@@ -12,7 +12,6 @@ from PySide6.QtGui import QShortcut, QKeySequence, QIntValidator
 from PySide6.QtUiTools import QUiLoader
 from database import database
 
-sys.settrace
 
 class MainWindow(QMainWindow):
     def __init__(self, app):
@@ -42,7 +41,6 @@ class MainWindow(QMainWindow):
         self.load_help()
         self.create_shortcuts()
 
-
         # initialize database handler
         self.db = database(self.files_path)
         if (not self.db.create_db()):
@@ -56,7 +54,7 @@ class MainWindow(QMainWindow):
             self.series_table.setModel(self.db.get_series())
             self.update_page_bar()
 
-
+    # manual menu creation functions
     def create_games_menu(self):
         """
         construct and show the menu containing the games table, search bar, and page bar
@@ -71,9 +69,9 @@ class MainWindow(QMainWindow):
         self.game_table.verticalHeader().hide()
         self.game_table.setGridStyle(Qt.SolidLine)
         self.game_table.setSortingEnabled(True)
-        self.game_table.sortByColumn(0, Qt.DescendingOrder) # set default order to descending by game name
+        # set default order to descending by game name
+        self.game_table.sortByColumn(0, Qt.DescendingOrder)
 
-        # make title
         title = QLabel("Games")
         title.setAlignment(Qt.AlignCenter)
 
@@ -82,9 +80,6 @@ class MainWindow(QMainWindow):
 
         # add search bar
         self.create_search_box()
-
-        self.game_search["options"].buttonPressed.connect(self.set_game_filter)
-        self.game_search["bar"].returnPressed.connect(self.search_games)
 
         # connect everything
         games_layout.addWidget(title)
@@ -101,18 +96,19 @@ class MainWindow(QMainWindow):
         """
         creates the page bar ui and sets up the functionality
         """
-
         page_label = QLabel("Page 1")
         page_label.setAlignment(Qt.AlignCenter)
         next_page = QPushButton("Next")
         previous_page = QPushButton("Previous")
         next_page.hide()
         previous_page.hide()
+
         page_layout = QGridLayout()
         self.page_bar["next"] = next_page
         self.page_bar["previous"] = previous_page
         self.page_bar["label"] = page_label
 
+        # layout page stuff in a grid with horizontal spacers to keep them centered
         h_spacer1 = QSpacerItem(20, 40, QSizePolicy.Expanding, QSizePolicy.Minimum)
         h_spacer2 = QSpacerItem(20, 40, QSizePolicy.Expanding, QSizePolicy.Minimum)
         page_layout.addItem(h_spacer1)
@@ -128,7 +124,7 @@ class MainWindow(QMainWindow):
 
     def create_search_box(self):
         """
-        creates the search bar ui
+        creates the search bar ui and sets up its functionality
         """
         self.game_search["bar"] = QLineEdit()
         self.game_search["bar"].setToolTip("Enter what you want to search here")
@@ -166,9 +162,12 @@ class MainWindow(QMainWindow):
             sbl[i - 1].setToolTip("Filter by " + sbl[i - 1].text())
             search_box.addWidget(sbl[i - 1], 1, i)
 
+        self.game_search["options"].buttonPressed.connect(self.set_game_filter)
+        self.game_search["bar"].returnPressed.connect(self.search_games)
+
     def create_series_menu(self):
         """
-        construct and show the table of series
+        set up the table of series
         """
         series_frame = QFrame()
         series_layout = QVBoxLayout()
@@ -189,42 +188,6 @@ class MainWindow(QMainWindow):
 
         self.menu_dict["series"] = series_frame
         self.main_scene.addWidget(series_frame)
-
-    def save_config(self):
-        """
-        saves the current config to a json file
-        """
-        with open(self.files_path + "config.json", 'w') as f:
-            json.dump(self.config, f)
-
-    def load_config(self):
-        """
-        opens the config file and updates settings to match,
-        or if no valid config file exists, uses defaults
-        """
-        try:
-            f = open(self.files_path + "config.json")
-            config = json.load(f)
-            if (config is None or "text_size" not in config or "theme" not in config
-                or "screen_size" not in config or "items_per_page" not in config):
-                f.close()
-                raise FileNotFoundError
-            self.config = config
-            f.close()
-            light_b = self.menu_dict["settings"].findChild(QRadioButton, "light_theme")
-            dark_b = self.menu_dict["settings"].findChild(QRadioButton, "dark_theme")
-            system_b = self.menu_dict["settings"].findChild(QRadioButton, "system_theme")
-
-        except FileNotFoundError:
-            self.config = {"text_size": 1, "theme": "auto", "items_per_page": 15, "screen_size": 1}
-        self.update_font(self.config["text_size"])
-        self.set_theme(theme=self.config["theme"])
-        self.settings_buttons["set_text"].setCurrentIndex(self.config["text_size"])
-        self.settings_buttons[self.config["theme"]].setChecked(True)
-        self.db.set_items_per_page(self.config["items_per_page"])
-        self.settings_buttons["ipp"].setText(str(self.config["items_per_page"]))
-        screen_button = self.settings_buttons["screen_size"].button(self.config["screen_size"])
-        self.set_screen_size(screen_button)
 
     def create_shortcuts(self):
         """
@@ -290,6 +253,43 @@ class MainWindow(QMainWindow):
         self.main_scene.addLayout(nav_bar)
         self.main_scene.setStretchFactor(nav_bar, 0)
 
+    # config saving/loading functions
+    def save_config(self):
+        """
+        saves the current config to a json file
+        """
+        with open(self.files_path + "config.json", 'w') as f:
+            json.dump(self.config, f)
+
+    def load_config(self):
+        """
+        opens the config file and updates settings to match,
+        or if no valid config file exists, uses defaults
+        """
+        # try loading a config file
+        try:
+            f = open(self.files_path + "config.json")
+            config = json.load(f)
+            if (config is None or "text_size" not in config or "theme" not in config
+                or "screen_size" not in config or "items_per_page" not in config):
+                f.close()
+                raise FileNotFoundError
+            self.config = config
+            f.close()
+        except FileNotFoundError:
+            # no file found so use defaults
+            self.config = {"text_size": 1, "theme": "auto", "items_per_page": 15, "screen_size": 1}
+
+        # update configuration
+        self.update_font(self.config["text_size"])
+        self.set_theme(theme=self.config["theme"])
+        self.settings_buttons["set_text"].setCurrentIndex(self.config["text_size"])
+        self.settings_buttons[self.config["theme"]].setChecked(True)
+        self.db.set_items_per_page(self.config["items_per_page"])
+        self.settings_buttons["ipp"].setText(str(self.config["items_per_page"]))
+        screen_button = self.settings_buttons["screen_size"].button(self.config["screen_size"])
+        self.set_screen_size(screen_button)
+
     # functions to set options
     def set_theme(self, checked=False, theme=None):
         """
@@ -304,6 +304,7 @@ class MainWindow(QMainWindow):
             dark_b = self.settings_buttons["dark"]
             system_b = self.settings_buttons["auto"]
 
+            # set theme
             if (light_b.isChecked()):
                 qdarktheme.setup_theme("light", additional_qss=self.font_qss)
                 self.current_theme = "light"
@@ -358,6 +359,7 @@ class MainWindow(QMainWindow):
             }
             """
 
+        # ensure pushbuttons are actually highlighted when tabbed through
         if (self.current_theme == "dark"):
             self.font_qss += """
             QPushButton:focus {
@@ -405,11 +407,18 @@ class MainWindow(QMainWindow):
 
     # import/export functions
     def start_import(self):
+        """
+        prompts user for file, and displays chosen file name
+        """
         file_name = QFileDialog.getOpenFileName(self.menu_dict["settings"], "Choose import file", "~/", "(*.sqlite *.json)")
         chosen = self.menu_dict["settings"].findChild(QLabel, "chosen_import")
         chosen.setText(file_name[0])
 
     def finish_import(self):
+        """
+        called when user clicks "Import"; handles the actual importing
+        and displaying the result to the user
+        """
         chosen = self.menu_dict["settings"].findChild(QLabel, "chosen_import")
         to_import = chosen.text()
         success = False
@@ -432,6 +441,9 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Import Error", "Import failed")
 
     def start_export(self):
+        """
+        handle calling the right export function and displaying result to user
+        """
         file_name = QFileDialog.getSaveFileName(self.menu_dict["settings"], "Choose export file", "~/", "(*.sqlite *.json)")[0]
         success = False
         if (file_name[-6:] == "sqlite"):
@@ -500,12 +512,16 @@ class MainWindow(QMainWindow):
     # search functions
     def set_game_filter(self, button):
         """
-        sets the proxy model to filter for the given expression on the given column
+        sets which column the proxy model will filter on
         """
         column = self.game_search["options"].id(button)
         self.game_table.model().setFilterKeyColumn(column)
 
     def search_games(self):
+        """
+        make proxy model perform the "search"/filter
+        based on what's in the search bar
+        """
         filter = self.game_search["bar"].text()
         self.game_table.model().setFilterRegularExpression(filter)
 

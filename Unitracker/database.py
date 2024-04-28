@@ -4,7 +4,6 @@ from PySide6.QtCore import Qt, QSortFilterProxyModel
 import json
 import shutil
 import os
-from math import ceil
 
 
 class database:
@@ -302,6 +301,7 @@ class database:
         q.prepare("SELECT * FROM platform")
         if (not q.exec() or q.record().count() < 1):
             return False
+
         # convert platform records to list of dicts
         while (q.next()):
             platform = q.record()
@@ -323,6 +323,8 @@ class database:
                 f = s.field(i).name()
                 dict[f] = s.value(f)
             series.append(dict)
+
+        # saves (exports) the database converted to json
         to_export = {"games": games, "genres": genres, "platforms": platforms, "series": series}
         with open(filename, 'w') as fp:
             json.dump(to_export, fp)
@@ -355,7 +357,7 @@ class database:
         for i in range(len(headers)):
             model.setHeaderData(i, Qt.Horizontal, headers[i])
 
-        # proxy model does sorting for us
+        # proxy model handles sorting and filtering
         proxy = QSortFilterProxyModel()
         proxy.setSourceModel(model)
         return proxy
@@ -503,11 +505,11 @@ class database:
                 q_obj.exec()
             # old series and new series are different
             elif (not old_series is None and (item["series_name"] != old_game.value("series_name"))):
-                # if old series still has at least one game attached, update it
                 old_hours = 0.0 if old_game.isNull("hours_played") else float(old_game.value("hours_played"))
                 old_total = 0.0 if old_series.isNull("total_playtime") else float(old_series.value("total_playtime"))
                 old_num = old_series.value("num_games")
 
+                # if old series still has at least one game attached, update it
                 if (old_num - 1 > 0):
                     q_obj.prepare("UPDATE series SET num_games=?, total_playtime=? WHERE name=?")
                     q_obj.bindValue(0, old_num - 1)
@@ -603,6 +605,7 @@ class database:
             old_series = q_obj.record()
 
             if (old_series is not None and not old_series.isNull("num_games")):
+                # at least one game in series left, so update it
                 if (old_series.value("num_games") - 1 > 0):
                     old_hours = 0.0 if old_game.isNull("hours_played") else float(old_game.value("hours_played"))
                     old_total = 0.0 if old_series.isNull("total_playtime") else float(old_series.value("total_playtime"))
@@ -612,6 +615,7 @@ class database:
                     q_obj.bindValue(1, old_total - old_hours)
                     q_obj.bindValue(2, old_game.value("series_name"))
                     q_obj.exec()
+                # no games in series left, so delete it
                 else:
                     q_obj.prepare("DELETE FROM series WHERE name=?")
                     q_obj.bindValue(0, old_game.value("series_name"))
