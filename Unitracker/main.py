@@ -160,8 +160,6 @@ class MainWindow(QMainWindow):
         screen_button = self.settings_buttons["screen_size"].button(self.config["screen_size"])
         self.set_screen_size(screen_button)
 
-
-
     def create_shortcuts(self):
         """
         create/set all the keyboard shortcuts
@@ -272,25 +270,25 @@ class MainWindow(QMainWindow):
         elif (index == 1):
             self.font_qss = """
             * {
-                font-size: 24px;
+                font-size: 20px;
             }
             QLabel#title {
-                font-size: 36px;
+                font-size: 30px;
             }
             QTextBrowser#help_text {
-                font-size: 24px;
+                font-size: 20px;
             }
             """
         elif (index == 2):
             self.font_qss = """
             * {
-                font-size: 36px;
+                font-size: 26px;
             }
             QLabel#title {
                 font-size: 48px;
             }
             QTextBrowser#help_text {
-                font-size: 24px;
+                font-size: 28px;
             }
             """
 
@@ -327,6 +325,9 @@ class MainWindow(QMainWindow):
         self.save_config()
 
     def update_ipp(self):
+        """
+        updates the items (games) per page; only called when valid input is given
+        """
         ipp = self.menu_dict["settings"].findChild(QLineEdit, "ipp").text()
         t = int(ipp)
         self.db.set_items_per_page(t)
@@ -334,6 +335,8 @@ class MainWindow(QMainWindow):
         self.game_table.setModel(self.db.get_games())
         self.update_page_bar()
         self.save_config()
+        QMessageBox.information(self, "Success", "Games per page successfully updated")
+
 
     def start_import(self):
         file_name = QFileDialog.getOpenFileName(self.menu_dict["settings"], "Choose import file", "~/", "(*.sqlite *.json)")
@@ -345,14 +348,13 @@ class MainWindow(QMainWindow):
         to_import = chosen.text()
         success = False
         if (to_import[-6:] == "sqlite"):
-            #print("Import result:", self.db.import_db(to_import))
             if (self.db.import_db(to_import)):
                 success = True
         elif (to_import[-4:] == "json"):
             if (self.db.import_json(to_import)):
                 success = True
         else:
-            msg = QMessageBox.critical(self, "Import Error", "Unsupported file format selected.")
+            QMessageBox.critical(self, "Import Error", "Unsupported file format selected.")
             return
 
         if (success):
@@ -545,6 +547,7 @@ class MainWindow(QMainWindow):
             s = loader.load(settings_ui)
             settings_ui.close()
             if not s:
+                QMessageBox.critical(self, "Loading Error", "Settings menu failed to load!")
                 print(loader.errorString())
                 sys.exit(-1)
             s.hide()
@@ -552,7 +555,7 @@ class MainWindow(QMainWindow):
             self.main_scene.setStretchFactor(s, 1)
             self.menu_dict["settings"] = s
 
-            # connect buttons            
+            # connect buttons
             self.settings_buttons["set_text"] = s.findChild(QComboBox, "text_size")
             self.settings_buttons["light"] = s.findChild(QRadioButton, "light_theme")
             self.settings_buttons["dark"] = s.findChild(QRadioButton, "dark_theme")
@@ -595,6 +598,7 @@ class MainWindow(QMainWindow):
             h = loader.load(help_ui)
             help_ui.close()
             if not h:
+                QMessageBox.critical(self, "Loading Error", "Help menu failed to load!")
                 print(loader.errorString())
                 sys.exit(-1)
             h.hide()
@@ -613,6 +617,7 @@ class MainWindow(QMainWindow):
             edit = loader.load(edit_game_ui)
             edit_game_ui.close()
             if not edit:
+                QMessageBox.critical(self, "Loading Error", "Edit menu failed to load!")
                 print(loader.errorString())
                 sys.exit(-1)
             edit.hide()
@@ -633,11 +638,22 @@ class MainWindow(QMainWindow):
             edit.fields = {}
             edit.fields["name"] = edit.findChild(QLineEdit, "name_edit")
             edit.fields["progress"] = edit.findChild(QLineEdit, "progress_edit")
+
+            prog_val = QIntValidator()
+            prog_val.setRange(0,100)
+            edit.fields["progress"].setValidator(prog_val)
+
             edit.fields["hours_played"] = edit.findChild(QLineEdit, "hours_edit")
+            hours_val = QIntValidator()
+            hours_val.setBottom(0)
+            edit.fields["hours_played"].setValidator(hours_val)
+
             edit.fields["start_date"] = edit.findChild(QLineEdit, "startdate_edit")
             edit.fields["end_date"] = edit.findChild(QLineEdit, "enddate_edit")
             edit.fields["total_achievements"] = edit.findChild(QLineEdit, "total_edit")
+            edit.fields["total_achievements"].setValidator(hours_val)
             edit.fields["completed_achievements"] = edit.findChild(QLineEdit, "completed_edit")
+            edit.fields["completed_achievements"].setValidator(hours_val)
             edit.fields["series_name"] = edit.findChild(QLineEdit, "series_edit")
 
             edit.fields["genre"] = edit.findChild(QLineEdit, "genre_edit")
@@ -657,6 +673,7 @@ class MainWindow(QMainWindow):
             add_game_ui.close()
 
             if not add:
+                QMessageBox.critical(self, "Loading Error", "Add menu failed to load!")
                 print(loader.errorString())
                 sys.exit(-1)
 
@@ -669,7 +686,13 @@ class MainWindow(QMainWindow):
             add.fields = {}
             add.fields["name"] = add.findChild(QLineEdit, "name_edit")
             add.fields["progress"] = add.findChild(QLineEdit, "progress_edit")
+            prog_val = QIntValidator()
+            prog_val.setRange(0, 100)
+            add.fields["progress"].setValidator(prog_val)
             add.fields["hours_played"] = add.findChild(QLineEdit, "hours_edit")
+            hours_val = QIntValidator()
+            hours_val.setBottom(0)
+            add.fields["hours_played"].setValidator(hours_val)
             add.fields["start_date"] = add.findChild(QLineEdit, "startdate_edit")
             add.fields["end_date"] = add.findChild(QLineEdit, "enddate_edit")
             add.fields["total_achievements"] = add.findChild(QLineEdit, "total_edit")

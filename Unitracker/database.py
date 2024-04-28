@@ -17,7 +17,6 @@ class database:
         self.items_per_page = 5
         self.current_page = 0
 
-        # name VARCHAR(25), progress INT(3), hours_played NUMERIC(30), start_date DATE, end_date DATE, total_achievements INT(20), completed_achievements INT(20), series_name VARCHAR(25)
         try:
             file = open(self.db_name, 'x')
             file.close()
@@ -275,7 +274,6 @@ class database:
         q = QSqlQuery()
         q.prepare("SELECT * FROM game")
         if (not q.exec() or q.record().count() < 1):
-            print("game select error")
             return False
 
         # convert game records to list of dictionaries
@@ -303,7 +301,6 @@ class database:
 
         q.prepare("SELECT * FROM platform")
         if (not q.exec() or q.record().count() < 1):
-            print("platform select error")
             return False
         # convert platform records to list of dicts
         while (q.next()):
@@ -316,7 +313,6 @@ class database:
 
         q.prepare("SELECT * FROM series")
         if (not q.exec() or q.record().count() < 1):
-            print("series select error")
             return False
 
         # convert series records to list of dicts
@@ -338,7 +334,7 @@ class database:
         which contains all the game records joined with genre and platform records;
         supports pagination: 1 page = self.items_per_page records
         """
-        headers = ["Name","Progress (%)", "Hours\nPlayed", "Start Date", "End\nDate", "Total\nAchievements", "Completed\nAchievements", "Series\nName", "Genre", "Platform"]
+        headers = ["Name","Progress (%)", "Hours\nPlayed", "Start\nDate", "End\nDate", "Total\nAchievements", "Completed\nAchievements", "Series\nName", "Genre(s)", "Platform(s)"]
         model = QSqlQueryModel()
         query = """
         SELECT game.name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name,
@@ -347,6 +343,7 @@ class database:
         FROM game LEFT JOIN genre ON (game.name == genre.game_name) LEFT JOIN platform ON (game.name == platform.game_name)
         GROUP BY game.name
         """
+        # handles pages by using LIMIT and OFFSET clauses
         if (page == 0):
             self.current_page = 0
         offset = self.items_per_page*page
@@ -358,6 +355,7 @@ class database:
         for i in range(len(headers)):
             model.setHeaderData(i, Qt.Horizontal, headers[i])
 
+        # proxy model does sorting for us
         proxy = QSortFilterProxyModel()
         proxy.setSourceModel(model)
         return proxy
@@ -421,7 +419,7 @@ class database:
                 # series exists so update derived attributes
                 q_obj.prepare("UPDATE series SET num_games=?, total_playtime=? WHERE name=?")
                 q_obj.bindValue(0, old_series.value("num_games") + 1)
-                q_obj.bindValue(1, old_series.value("total_playtime") + item["hours_played"])
+                q_obj.bindValue(1, old_series.value("total_playtime") + float(item["hours_played"]))
                 q_obj.bindValue(2, item["series_name"])
                 q_obj.exec()
 
@@ -429,7 +427,6 @@ class database:
         q_obj.prepare(query)
         for i, v in enumerate(item):
             q_obj.bindValue(i, item[v])
-            # q_obj.bindValue(i, "NULL")
         rv = q_obj.exec()
 
         # add genres
