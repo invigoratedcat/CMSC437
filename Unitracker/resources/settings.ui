@@ -101,7 +101,7 @@
         <string>Choose the global text size</string>
        </property>
        <property name="currentText">
-        <string>Medium</string>
+        <string>Small</string>
        </property>
        <item>
         <property name="text">
@@ -195,6 +195,9 @@
   <tabstop>dark_theme</tabstop>
   <tabstop>system_theme</tabstop>
   <tabstop>text_size</tabstop>
+  <tabstop>select_import</tabstop>
+  <tabstop>import_button</tabstop>
+  <tabstop>export_button</tabstop>
  </tabstops>
  <resources/>
  <connections/>

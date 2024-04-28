@@ -5,7 +5,7 @@ import json
 from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QLabel
 from PySide6.QtWidgets import QBoxLayout, QVBoxLayout, QPushButton, QLayout
 from PySide6.QtWidgets import QTableView, QHeaderView, QFrame, QRadioButton, QLineEdit
-from PySide6.QtWidgets import QMessageBox, QComboBox, QFileDialog
+from PySide6.QtWidgets import QMessageBox, QComboBox, QFileDialog, QSizePolicy
 from PySide6 import QtCore
 from PySide6.QtCore import Qt, QFile
 from PySide6.QtGui import QShortcut, QKeySequence
@@ -26,6 +26,7 @@ class MainWindow(QMainWindow):
         self.current_menu = "games"
         self.menu_dict = {}
         self.settings_buttons = {}
+        self.page_bar = {}
         self.files_path = "./resources/"  # used for accessing ui and database files
 
         # load and create menus
@@ -33,7 +34,6 @@ class MainWindow(QMainWindow):
         self.create_games_menu()
         self.create_series_menu()
         self.load_settings()
-        self.load_config()
 
         self.load_add()
         self.load_edit()
@@ -44,10 +44,19 @@ class MainWindow(QMainWindow):
         self.db = database(self.files_path)
         if (not self.db.create_db()):
             QMessageBox.critical(self, "Database Error", "Database creation failed.")
+            return False
         else:
+            self.load_config()
+            self.db.set_items_per_page(5)
             self.game_table.setModel(self.db.get_games())
             self.series_table.setModel(self.db.get_series())
-
+            self.update_page_bar()
+            """
+            if (self.db.has_next_page()):
+                self.page_bar["next"].show()
+            if (self.db.get_current_page() > 0):
+                self.page_bar["previous"].show()
+            """
     def create_games_menu(self):
         """
         construct and show the table of games;
@@ -65,16 +74,34 @@ class MainWindow(QMainWindow):
         game_table.setSortingEnabled(True)
         game_table.sortByColumn(0, Qt.DescendingOrder) # set default order to descending by game name
 
-        title = QLabel()
-        title.setText("Games")
+        title = QLabel("Games")
+        title.setAlignment(Qt.AlignCenter)
+        page_label = QLabel("Page 1")
+        page_label.setAlignment(Qt.AlignCenter)
+        next_page = QPushButton("Next")
+        previous_page = QPushButton("Previous")
+        next_page.hide()
+        previous_page.hide()
+        page_layout = QBoxLayout(QBoxLayout.LeftToRight)
+        self.page_bar["next"] = next_page
+        self.page_bar["previous"] = previous_page
+        self.page_bar["label"] = page_label
+
+        page_layout.addWidget(previous_page)
+        page_layout.addWidget(page_label)
+        page_layout.addWidget(next_page)
 
         game_table.setVisible(True)
         games_layout.addWidget(title)
         games_layout.addWidget(game_table)
+        games_layout.addLayout(page_layout)
         games_frame.setLayout(games_layout)
 
         self.menu_dict["games"] = games_frame
         self.main_scene.addWidget(games_frame)
+
+        next_page.clicked.connect(self.next_page)
+        previous_page.clicked.connect(self.previous_page)
 
     def create_series_menu(self):
         """
@@ -91,6 +118,7 @@ class MainWindow(QMainWindow):
         series_table.sortByColumn(0, Qt.DescendingOrder)
 
         title = QLabel("Series")
+        title.setAlignment(Qt.AlignCenter)
         series_layout.addWidget(title)
         series_layout.addWidget(series_table)
         series_frame.setLayout(series_layout)
@@ -124,11 +152,12 @@ class MainWindow(QMainWindow):
             system_b = self.menu_dict["settings"].findChild(QRadioButton, "system_theme")
 
         except FileNotFoundError:
-            self.config = {"text_size": 1, "theme": "auto"}
+            self.config = {"text_size": 1, "theme": "auto", "items_per_page": 15}
         self.update_font(self.config["text_size"])
         self.set_theme(theme=self.config["theme"])
         self.settings_buttons["set_text"].setCurrentIndex(self.config["text_size"])
         self.settings_buttons[self.config["theme"]].setChecked(True)
+        self.db.set_items_per_page(self.config["items_per_page"])
 
 
     def create_shortcuts(self):
@@ -211,6 +240,7 @@ class MainWindow(QMainWindow):
             elif (system_b.isChecked()):
                 qdarktheme.setup_theme("auto", additional_qss=self.font_qss)
                 self.current_theme = "auto"
+            self.update_font(self.config["text_size"])
             self.config["theme"] = self.current_theme
             self.save_config()
 
@@ -229,7 +259,7 @@ class MainWindow(QMainWindow):
             QTextBrowser#help_text {
                 font-size: 12px;
             }
-            """
+            """            
         elif (index == 1):
             self.font_qss = """
             * {
@@ -254,12 +284,26 @@ class MainWindow(QMainWindow):
                 font-size: 18px;
             }
             """
+
+        if (self.current_theme == "dark"):
+            self.font_qss += """
+            QPushButton:focus {
+                background-color: white;
+            }
+            """
+        else:
+            self.font_qss += """
+            QPushButton:focus {
+                background-color: lightgrey;
+            }
+            """
+
         qdarktheme.setup_theme(self.current_theme, additional_qss=self.font_qss)
         self.config["text_size"] = index
         self.save_config()
 
     def start_import(self):
-        file_name = QFileDialog.getOpenFileName(self.menu_dict["settings"], "Choose import file", "~/", "(*.sqlite *.xml *.json)")
+        file_name = QFileDialog.getOpenFileName(self.menu_dict["settings"], "Choose import file", "~/", "(*.sqlite *.json)")
         chosen = self.menu_dict["settings"].findChild(QLabel, "chosen_import")
         chosen.setText(file_name[0])
 
@@ -271,8 +315,6 @@ class MainWindow(QMainWindow):
             #print("Import result:", self.db.import_db(to_import))
             if (self.db.import_db(to_import)):
                 success = True
-        elif (to_import[-3:] == "xml"):
-            pass
         elif (to_import[-4:] == "json"):
             if (self.db.import_json(to_import)):
                 success = True
@@ -284,24 +326,74 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Import Success", "Games successfully imported!")
             self.game_table.setModel(self.db.get_games())
             self.series_table.setModel(self.db.get_series())
+            self.update_page_bar()
         else:
             QMessageBox.critical(self, "Import Error", "Import failed")
 
     def start_export(self):
-        file_name = QFileDialog.getSaveFileName(self.menu_dict["settings"], "Choose export file", "~/", "(*.sqlite *.xml *.json)")[0]
+        file_name = QFileDialog.getSaveFileName(self.menu_dict["settings"], "Choose export file", "~/", "(*.sqlite *.json)")[0]
         success = False
         if (file_name[-6:] == "sqlite"):
             if (self.db.export_db(file_name)):
                 success = True
-        elif (file_name[-3:] == "xml"):
-            pass
         elif (file_name[-4:] == "json"):
             if (self.db.export_json(file_name)):
                 success = True
+        else:
+            QMessageBox.critical(self, "Export Error", "Unsupported file format selected.")
+            return
+
         if (success):
             QMessageBox.information(self, "Export Success", "Games successfully exported!")
         else:
             QMessageBox.critical(self, "Export Error", "Export failed")
+
+    def next_page(self):
+        """
+        tries going to next page; updates visibility of next page button,
+        and updates the table view
+        """
+        new_model = self.db.forward_page()
+        if (new_model is not None):
+            self.game_table.setModel(new_model)
+            if (not self.db.has_next_page()):
+                self.page_bar["next"].hide()
+            self.page_bar["label"].setText(f'Page {self.db.get_current_page() + 1}')
+        else:
+            self.page_bar["next"].hide()
+        if (not self.page_bar["previous"].isVisible()):
+            self.page_bar["previous"].show()
+
+    def previous_page(self):
+        """
+        tries going to previous page; updates visibility of previous page button,
+        and updates the table view
+        """
+        new_model = self.db.backward_page()
+        if (new_model is not None):
+            self.game_table.setModel(new_model)
+            if (self.db.get_current_page() == 0):
+                self.page_bar["previous"].hide()
+            self.page_bar["label"].setText(f'Page {self.db.get_current_page() + 1}')
+        else:
+            self.page_bar["previous"].hide()
+        if (not self.page_bar["next"].isVisible()):
+            self.page_bar["next"].show()
+
+    def update_page_bar(self):
+        """
+        update page buttons, label
+        """
+        if (self.db.get_current_page() == 0):
+            self.page_bar["previous"].hide()
+        else:
+            self.page_bar["previous"].show()
+
+        if (self.db.has_next_page()):
+            self.page_bar["next"].show()
+        else:
+            self.page_bar["next"].hide()
+        self.page_bar["label"].setText(f'Page {self.db.get_current_page() + 1}')
 
     def add_game(self):
         """
@@ -332,6 +424,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Add Error", "Game was not successfully added")
         self.game_table.setModel(self.db.get_games())
         self.series_table.setModel(self.db.get_series())
+        self.update_page_bar()
 
     def edit_game(self):
         """
@@ -407,6 +500,7 @@ class MainWindow(QMainWindow):
                 self.db.delete_item(game_name)
                 self.game_table.setModel(self.db.get_games())
                 self.series_table.setModel(self.db.get_series())
+                self.update_page_bar()
 
     def load_settings(self):
         """

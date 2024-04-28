@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QSortFilterProxyModel
 import json
 import shutil
 import os
+from math import ceil
 
 
 class database:
@@ -12,6 +13,9 @@ class database:
         self.db_name = self.files_path + "UnitrackerGames.sqlite"
         self.db = QSqlDatabase.addDatabase("QSQLITE")
         self.db.setDatabaseName(self.db_name)
+        self.DEFAULT_IPP = 5
+        self.items_per_page = 5
+        self.current_page = 0
 
         # name VARCHAR(25), progress INT(3), hours_played NUMERIC(30), start_date DATE, end_date DATE, total_achievements INT(20), completed_achievements INT(20), series_name VARCHAR(25)
         try:
@@ -19,6 +23,50 @@ class database:
             file.close()
         except FileExistsError:
             pass
+
+    def set_items_per_page(self, ipp):
+        """
+        sets items per page as ipp
+        """
+        self.items_per_page = ipp if ipp > 0 else self.DEFAULT_IPP
+
+    def has_next_page(self):
+        """
+        returns whether the game table has a page after the current one
+        """
+        next_page = QSqlQuery()
+        query = "SELECT * FROM game LIMIT " + str(self.items_per_page)
+        query += " OFFSET " + str(self.items_per_page*(self.current_page + 1))
+        next_page.prepare(query)
+        next_page.exec()
+        next_page.next()
+
+        return not next_page.record().isNull("name")
+
+    def forward_page(self):
+        """
+        Tries to move the table to the next page;
+        if successful, returns the model of the next page,
+        otherwise returns None
+        """
+        if (self.has_next_page()):
+            self.current_page += 1
+            return self.get_games(self.current_page)
+        return None
+
+    def backward_page(self):
+        """
+        Tries to move the table to the previous page;
+        if successful, returns the model of the previous page,
+        otherwise returns None
+        """
+        if (self.current_page > 0):
+            self.current_page -= 1
+            return self.get_games(self.current_page)
+        return None
+
+    def get_current_page(self):
+        return self.current_page
 
     def create_db(self, db=None):
         """
@@ -45,6 +93,17 @@ class database:
                 return False
         f.close()
         return True
+
+    def remove_db(self, con_name, db_name):
+        """
+        removes the given database and its file
+        """
+        QSqlDatabase.removeDatabase(con_name)
+        try:
+            f = db_name + ".sqlite"
+            os.remove(f)
+        except FileNotFoundError:
+            pass
 
     def import_db(self, filename):
         """
@@ -93,7 +152,7 @@ class database:
 
             # overwrite the database
             try:
-                dst = shutil.copy(filename, self.db_name)
+                shutil.copy(filename, self.db_name)
             except shutil.SameFileError:
                 return False
             return True
@@ -201,16 +260,6 @@ class database:
         except FileNotFoundError:
             return False
 
-    def remove_db(self, con_name, db_name):
-        """
-        removes the given database and its file
-        """
-        QSqlDatabase.removeDatabase(con_name)
-        try:
-            f = db_name + ".sqlite"
-            os.remove(f)
-        except FileNotFoundError:
-            pass
 
     def export_db(self, filename):
         return shutil.copy(self.db_name, filename)
@@ -269,6 +318,7 @@ class database:
         if (not q.exec() or q.record().count() < 1):
             print("series select error")
             return False
+
         # convert series records to list of dicts
         while (q.next()):
             s = q.record()
@@ -282,23 +332,29 @@ class database:
             json.dump(to_export, fp)
         return True
 
-    def get_games(self):
+    def get_games(self, page=0):
         """
         return a QSortFilterProxyModel with a QSqlQueryModel as its source model,
-        which contains all the game records joined with genre and platform records
+        which contains all the game records joined with genre and platform records;
+        supports pagination: 1 page = self.items_per_page records
         """
         headers = ["Name","Progress (%)", "Hours\nPlayed", "Start Date", "End\nDate", "Total\nAchievements", "Completed\nAchievements", "Series\nName", "Genre", "Platform"]
         model = QSqlQueryModel()
-        q = "WITH genres AS (SELECT * FROM genre) platforms AS (SELECT * FROM platform)"
-        # name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name, genre.name AS genre
-        #model.setQuery("SELECT game.name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name, group_concat(genre.name, ',') AS genre_name, group_concat(platform.name, ',') AS platform_name FROM game LEFT JOIN (genre NATURAL JOIN platform) GROUP BY game.name")
-        #model.setQuery("WITH g_genres AS (SELECT * FROM game LEFT JOIN genre ON (game.name == genre.game_name)), g_platform AS (SELECT * FROM game LEFT JOIN platform ON (game.name == platform.game_name)) SELECT * FROM g_genre LEFT JOIN g_platform")
-        #model.setQuery("WITH g_genres AS (SELECT *, group_concat(genre.name, ',') FROM game LEFT JOIN genre ON (game.name == genre.game_name) GROUP BY game.name), p AS (SELECT *, group_concat(platform.name, ',') FROM platform) SELECT * FROM g_genres LEFT JOIN p ON (g_genres.name == p.game_name)")
+        query = """
+        SELECT game.name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name,
+        group_concat(DISTINCT genre.name) AS genre_name,
+        group_concat(DISTINCT platform.name) AS platform_name
+        FROM game LEFT JOIN genre ON (game.name == genre.game_name) LEFT JOIN platform ON (game.name == platform.game_name)
+        GROUP BY game.name
+        """
+        if (page == 0):
+            self.current_page = 0
+        offset = self.items_per_page*page
+        query = query + " LIMIT " + str(self.items_per_page)
+        if (offset > 0):
+            query = query + " OFFSET " + str(offset)
+        model.setQuery(query)
 
-        # mostly working, just has duplicate genre/platform due to joining...
-        model.setQuery("SELECT game.name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name, group_concat(genre.name, ',') AS genre_name, group_concat(platform.name, ',') AS platform_name FROM game LEFT JOIN genre ON (game.name == genre.game_name) LEFT JOIN platform ON (game.name == platform.game_name) GROUP BY game.name")
-
-        #model.setQuery("SELECT game.name, progress, hours_played, start_date, end_date, total_achievements, completed_achievements, series_name, genre.name, platform.name FROM game LEFT JOIN genre ON (game.name == genre.game_name) LEFT JOIN platform ON (game.name == platform.game_name)")
         for i in range(len(headers)):
             model.setHeaderData(i, Qt.Horizontal, headers[i])
 
@@ -601,11 +657,3 @@ class database:
             platforms.append(q_obj.record().value("name"))
 
         return platforms
-
-    def close(self):
-        if self.db.isOpen():
-            self.db.close()
-
-    def open(self):
-        if not self.db.isOpen():
-            self.db.open()
