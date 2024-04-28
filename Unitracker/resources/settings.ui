@@ -46,14 +46,7 @@
     </spacer>
    </item>
    <item>
-    <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0">
-     <item row="3" column="0" alignment="Qt::AlignRight">
-      <widget class="QLabel" name="export_label">
-       <property name="text">
-        <string>Export:</string>
-       </property>
-      </widget>
-     </item>
+    <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,0,0">
      <item row="0" column="2">
       <widget class="QRadioButton" name="dark_theme">
        <property name="toolTip">
@@ -64,34 +57,27 @@
        </property>
       </widget>
      </item>
-     <item row="2" column="3">
+     <item row="4" column="3">
       <widget class="QPushButton" name="import_button">
+       <property name="toolTip">
+        <string>Tries to import the selected file</string>
+       </property>
        <property name="text">
         <string>Import</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QRadioButton" name="light_theme">
+     <item row="0" column="3">
+      <widget class="QRadioButton" name="system_theme">
        <property name="toolTip">
-        <string>Sets the app's theme to light</string>
+        <string>Sets the app theme to your system's theme</string>
        </property>
        <property name="text">
-        <string>Light Mode</string>
+        <string>Automatic
+(System Theme)</string>
        </property>
-      </widget>
-     </item>
-     <item row="0" column="0" alignment="Qt::AlignRight">
-      <widget class="QLabel" name="theme_label">
-       <property name="text">
-        <string>Theme:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0" alignment="Qt::AlignRight">
-      <widget class="QLabel" name="textsize_label">
-       <property name="text">
-        <string>Text Size:</string>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -102,6 +88,9 @@
        </property>
        <property name="currentText">
         <string>Small</string>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QComboBox::AdjustToMinimumContentsLength</enum>
        </property>
        <item>
         <property name="text">
@@ -120,41 +109,20 @@
        </item>
       </widget>
      </item>
-     <item row="3" column="1">
-      <widget class="QPushButton" name="export_button">
-       <property name="text">
-        <string>Export As</string>
+     <item row="2" column="4">
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
        </property>
-      </widget>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
      </item>
-     <item row="2" column="0" alignment="Qt::AlignRight">
-      <widget class="QLabel" name="import_label">
-       <property name="text">
-        <string>Import:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="3">
-      <widget class="QRadioButton" name="system_theme">
-       <property name="toolTip">
-        <string>Sets the app theme to your system's theme</string>
-       </property>
-       <property name="text">
-        <string>Automatic (System Theme)</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QPushButton" name="select_import">
-       <property name="text">
-        <string>Select Import File</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="2">
+     <item row="4" column="2">
       <widget class="QLabel" name="chosen_import">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -170,6 +138,119 @@
        </property>
        <property name="scaledContents">
         <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLineEdit" name="ipp"/>
+     </item>
+     <item row="2" column="2">
+      <widget class="QRadioButton" name="maximized">
+       <property name="toolTip">
+        <string>Makes the app fill most of the screen</string>
+       </property>
+       <property name="text">
+        <string>Maximized</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0" alignment="Qt::AlignRight">
+      <widget class="QLabel" name="import_label">
+       <property name="text">
+        <string>Import:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="screen_label">
+       <property name="text">
+        <string>Screen Size:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0" alignment="Qt::AlignRight">
+      <widget class="QLabel" name="export_label">
+       <property name="text">
+        <string>Export:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0" alignment="Qt::AlignRight">
+      <widget class="QLabel" name="theme_label">
+       <property name="text">
+        <string>Theme:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QPushButton" name="select_import">
+       <property name="toolTip">
+        <string>Opens a menu to choose a file to import</string>
+       </property>
+       <property name="text">
+        <string>Select Import File</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QPushButton" name="export_button">
+       <property name="toolTip">
+        <string>Opens a menu to select a location for exporting the games</string>
+       </property>
+       <property name="text">
+        <string>Export As</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="3">
+      <widget class="QRadioButton" name="fullscreen">
+       <property name="toolTip">
+        <string>Makes the app fill all of the screen</string>
+       </property>
+       <property name="text">
+        <string>Fullscreen</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QRadioButton" name="light_theme">
+       <property name="toolTip">
+        <string>Sets the app's theme to light</string>
+       </property>
+       <property name="text">
+        <string>Light Mode</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QRadioButton" name="windowed">
+       <property name="toolTip">
+        <string>Sets the app to be windowed</string>
+       </property>
+       <property name="text">
+        <string>Windowed</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Games Menu
+Items Per Page
+ (1 - 40)</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0" alignment="Qt::AlignRight">
+      <widget class="QLabel" name="textsize_label">
+       <property name="text">
+        <string>Text Size:</string>
        </property>
       </widget>
      </item>
@@ -195,6 +276,10 @@
   <tabstop>dark_theme</tabstop>
   <tabstop>system_theme</tabstop>
   <tabstop>text_size</tabstop>
+  <tabstop>windowed</tabstop>
+  <tabstop>maximized</tabstop>
+  <tabstop>fullscreen</tabstop>
+  <tabstop>ipp</tabstop>
   <tabstop>select_import</tabstop>
   <tabstop>import_button</tabstop>
   <tabstop>export_button</tabstop>

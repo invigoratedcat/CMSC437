@@ -2,13 +2,13 @@
 import sys
 import qdarktheme
 import json
-from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QLabel
-from PySide6.QtWidgets import QBoxLayout, QVBoxLayout, QPushButton, QLayout
+from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QButtonGroup
+from PySide6.QtWidgets import QBoxLayout, QVBoxLayout, QPushButton, QGridLayout
 from PySide6.QtWidgets import QTableView, QHeaderView, QFrame, QRadioButton, QLineEdit
-from PySide6.QtWidgets import QMessageBox, QComboBox, QFileDialog, QSizePolicy
+from PySide6.QtWidgets import QMessageBox, QComboBox, QFileDialog, QSizePolicy, QSpacerItem
 from PySide6 import QtCore
 from PySide6.QtCore import Qt, QFile
-from PySide6.QtGui import QShortcut, QKeySequence
+from PySide6.QtGui import QShortcut, QKeySequence, QIntValidator
 from PySide6.QtUiTools import QUiLoader
 from database import database
 
@@ -44,19 +44,13 @@ class MainWindow(QMainWindow):
         self.db = database(self.files_path)
         if (not self.db.create_db()):
             QMessageBox.critical(self, "Database Error", "Database creation failed.")
-            return False
+            sys.exit(-1)
         else:
             self.load_config()
-            self.db.set_items_per_page(5)
             self.game_table.setModel(self.db.get_games())
             self.series_table.setModel(self.db.get_series())
             self.update_page_bar()
-            """
-            if (self.db.has_next_page()):
-                self.page_bar["next"].show()
-            if (self.db.get_current_page() > 0):
-                self.page_bar["previous"].show()
-            """
+
     def create_games_menu(self):
         """
         construct and show the table of games;
@@ -82,14 +76,17 @@ class MainWindow(QMainWindow):
         previous_page = QPushButton("Previous")
         next_page.hide()
         previous_page.hide()
-        page_layout = QBoxLayout(QBoxLayout.LeftToRight)
+        page_layout = QGridLayout()
         self.page_bar["next"] = next_page
         self.page_bar["previous"] = previous_page
         self.page_bar["label"] = page_label
 
-        page_layout.addWidget(previous_page)
-        page_layout.addWidget(page_label)
-        page_layout.addWidget(next_page)
+        horizontal_spacer = QSpacerItem(20, 40, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        page_layout.addItem(horizontal_spacer)
+        page_layout.addWidget(previous_page, 0, 1)
+        page_layout.addWidget(page_label, 0, 2)
+        page_layout.addWidget(next_page, 0, 3)
+        page_layout.addItem(horizontal_spacer, 0, 4)
 
         game_table.setVisible(True)
         games_layout.addWidget(title)
@@ -142,7 +139,8 @@ class MainWindow(QMainWindow):
         try:
             f = open(self.files_path + "config.json")
             config = json.load(f)
-            if (config is None or "text_size" not in config or "theme" not in config):
+            if (config is None or "text_size" not in config or "theme" not in config
+                or "screen_size" not in config or "items_per_page" not in config):
                 f.close()
                 raise FileNotFoundError
             self.config = config
@@ -152,12 +150,16 @@ class MainWindow(QMainWindow):
             system_b = self.menu_dict["settings"].findChild(QRadioButton, "system_theme")
 
         except FileNotFoundError:
-            self.config = {"text_size": 1, "theme": "auto", "items_per_page": 15}
+            self.config = {"text_size": 1, "theme": "auto", "items_per_page": 15, "screen_size": 1}
         self.update_font(self.config["text_size"])
         self.set_theme(theme=self.config["theme"])
         self.settings_buttons["set_text"].setCurrentIndex(self.config["text_size"])
         self.settings_buttons[self.config["theme"]].setChecked(True)
         self.db.set_items_per_page(self.config["items_per_page"])
+        self.settings_buttons["ipp"].setText(str(self.config["items_per_page"]))
+        screen_button = self.settings_buttons["screen_size"].button(self.config["screen_size"])
+        self.set_screen_size(screen_button)
+
 
 
     def create_shortcuts(self):
@@ -190,12 +192,19 @@ class MainWindow(QMainWindow):
 
         # create buttons
         games = QPushButton("Games")
+        games.setToolTip("Opens the games menu")
         series = QPushButton("Series")
+        series.setToolTip("Opens the series menu")
         add_game = QPushButton("Add Game")
+        add_game.setToolTip("Opens the add game menu")
         edit_game = QPushButton("Edit Game")
+        edit_game.setToolTip("Opens the edit game menu if a game is selected")
         delete_game = QPushButton("Delete Game")
+        delete_game.setToolTip("Prompts you for deletion of the currently selected game(s)")
         settings = QPushButton("Settings")
+        settings.setToolTip("Opens the settings menu")
         help = QPushButton("Help")
+        help.setToolTip("Opens the help menu")
 
         nav_bar.addWidget(games)
         nav_bar.addWidget(series)
@@ -227,9 +236,9 @@ class MainWindow(QMainWindow):
             qdarktheme.setup_theme(theme, additional_qss=self.font_qss)
             self.current_theme = theme
         else:
-            light_b = self.menu_dict["settings"].findChild(QRadioButton, "light_theme")
-            dark_b = self.menu_dict["settings"].findChild(QRadioButton, "dark_theme")
-            system_b = self.menu_dict["settings"].findChild(QRadioButton, "system_theme")
+            light_b = self.settings_buttons["light"]
+            dark_b = self.settings_buttons["dark"]
+            system_b = self.settings_buttons["auto"]
 
             if (light_b.isChecked()):
                 qdarktheme.setup_theme("light", additional_qss=self.font_qss)
@@ -251,37 +260,37 @@ class MainWindow(QMainWindow):
         if (index == 0):
             self.font_qss = """
             * {
-                font-size: 12px;
+                font-size: 14px;
             }
             QLabel#title {
                 font-size: 16px;
             }
             QTextBrowser#help_text {
-                font-size: 12px;
+                font-size: 14px;
             }
             """            
         elif (index == 1):
             self.font_qss = """
             * {
-                font-size: 14px;
+                font-size: 24px;
             }
             QLabel#title {
-                font-size: 20px;
+                font-size: 36px;
             }
             QTextBrowser#help_text {
-                font-size: 14px;
+                font-size: 24px;
             }
             """
         elif (index == 2):
             self.font_qss = """
             * {
-                font-size: 18px;
+                font-size: 36px;
             }
             QLabel#title {
-                font-size: 26px;
+                font-size: 48px;
             }
             QTextBrowser#help_text {
-                font-size: 18px;
+                font-size: 24px;
             }
             """
 
@@ -300,6 +309,30 @@ class MainWindow(QMainWindow):
 
         qdarktheme.setup_theme(self.current_theme, additional_qss=self.font_qss)
         self.config["text_size"] = index
+        self.save_config()
+
+    def set_screen_size(self, button_pressed):
+        """
+        sets the screen size
+        """
+        id = self.settings_buttons["screen_size"].id(button_pressed)
+        if (id == 1):
+            self.setWindowState(Qt.WindowNoState)
+        elif (id == 2):
+            self.setWindowState(Qt.WindowMaximized)
+        elif (id == 3):
+            self.setWindowState(Qt.WindowFullScreen)
+        self.config["screen_size"] = id
+        button_pressed.setChecked(True)
+        self.save_config()
+
+    def update_ipp(self):
+        ipp = self.menu_dict["settings"].findChild(QLineEdit, "ipp").text()
+        t = int(ipp)
+        self.db.set_items_per_page(t)
+        self.config["items_per_page"] = t
+        self.game_table.setModel(self.db.get_games())
+        self.update_page_bar()
         self.save_config()
 
     def start_import(self):
@@ -519,19 +552,35 @@ class MainWindow(QMainWindow):
             self.main_scene.setStretchFactor(s, 1)
             self.menu_dict["settings"] = s
 
-            # connect buttons
+            # connect buttons            
             self.settings_buttons["set_text"] = s.findChild(QComboBox, "text_size")
             self.settings_buttons["light"] = s.findChild(QRadioButton, "light_theme")
             self.settings_buttons["dark"] = s.findChild(QRadioButton, "dark_theme")
             self.settings_buttons["auto"] = s.findChild(QRadioButton, "system_theme")
+            self.settings_buttons["screen_size"] = QButtonGroup()
             start_import = s.findChild(QPushButton, "import_button")
             select_import = s.findChild(QPushButton, "select_import")
             start_export = s.findChild(QPushButton, "export_button")
 
+            windowed = s.findChild(QRadioButton, "windowed")
+            maximized = s.findChild(QRadioButton, "maximized")
+            fullscreen = s.findChild(QRadioButton, "fullscreen")
+            self.settings_buttons["screen_size"].addButton(windowed, 1)
+            self.settings_buttons["screen_size"].addButton(maximized, 2)
+            self.settings_buttons["screen_size"].addButton(fullscreen, 3)
+
+            ipp = s.findChild(QLineEdit, "ipp")
+            self.settings_buttons["ipp"] = ipp
+            ipp_val = QIntValidator()
+            ipp_val.setRange(1, 40)
+            ipp.setValidator(ipp_val)
+
+            self.settings_buttons["screen_size"].buttonPressed.connect(self.set_screen_size)
             self.settings_buttons["light"].clicked.connect(self.set_theme)
             self.settings_buttons["dark"].clicked.connect(self.set_theme)
             self.settings_buttons["auto"].clicked.connect(self.set_theme)
             self.settings_buttons["set_text"].currentIndexChanged.connect(self.update_font)
+            ipp.returnPressed.connect(self.update_ipp)
             select_import.clicked.connect(self.start_import)
             start_import.clicked.connect(self.finish_import)
             start_export.clicked.connect(self.start_export)
@@ -579,6 +628,7 @@ class MainWindow(QMainWindow):
             edit = self.menu_dict["edit_game"]
             edit_game = edit.findChild(QPushButton, "add_game")
             edit_game.setText("Edit Game")
+            edit_game.setToolTip("Updates the game with the currently entered information")
 
             edit.fields = {}
             edit.fields["name"] = edit.findChild(QLineEdit, "name_edit")

@@ -196,6 +196,9 @@ Achievements</string>
    </item>
    <item row="2" column="1">
     <widget class="QPushButton" name="add_game">
+     <property name="toolTip">
+      <string>Adds a game based on the currently entered information</string>
+     </property>
      <property name="text">
       <string>Add Game</string>
      </property>
