@@ -24,9 +24,10 @@ class MainWindow(QMainWindow):
         self.centralWidget().setLayout(self.main_scene)
         self.current_theme = "dark"
         self.current_menu = "games"
-        self.menu_dict = {}
-        self.settings_buttons = {}
-        self.page_bar = {}
+        self.menu_dict = {} # contains all menus
+        self.settings_buttons = {} # contains most of the settings ui elements
+        self.page_bar = {} # contains the ui elements for game pages
+        self.game_search = {} # contains most of the ui elements for game search bar
         self.files_path = "./resources/"  # used for accessing ui and database files
 
         # load and create menus
@@ -48,6 +49,7 @@ class MainWindow(QMainWindow):
         else:
             self.load_config()
             self.game_table.setModel(self.db.get_games())
+            self.game_table.model().setFilterCaseSensitivity(Qt.CaseInsensitive)
             self.series_table.setModel(self.db.get_series())
             self.update_page_bar()
 
@@ -68,6 +70,7 @@ class MainWindow(QMainWindow):
         game_table.setSortingEnabled(True)
         game_table.sortByColumn(0, Qt.DescendingOrder) # set default order to descending by game name
 
+        # make title, page buttons and label
         title = QLabel("Games")
         title.setAlignment(Qt.AlignCenter)
         page_label = QLabel("Page 1")
@@ -88,8 +91,47 @@ class MainWindow(QMainWindow):
         page_layout.addWidget(next_page, 0, 3)
         page_layout.addItem(horizontal_spacer, 0, 4)
 
+        # add search bar
+        self.game_search["bar"] = QLineEdit()
+        self.game_search["bar"].setToolTip("Enter what you want to search here")
+        self.game_search["options"] = QButtonGroup()
+        search_label = QLabel("Search\nGames:")
+        search_label.setAlignment(Qt.AlignRight)
+        search_box = QGridLayout()
+        option_label = QLabel("Search by:")
+        option_label.setAlignment(Qt.AlignRight)
+
+        search_name = QRadioButton("Name")
+        search_prog = QRadioButton("Progress")
+        search_hours = QRadioButton("Hours\nPlayed")
+        search_start = QRadioButton("Start\nDate")
+        search_end = QRadioButton("End\nDate")
+        search_total = QRadioButton("Total\nAchievements")
+        search_completed = QRadioButton("Completed\nAchievements")
+        search_series = QRadioButton("Series")
+        search_genre = QRadioButton("Genre")
+        search_platform = QRadioButton("Platform")
+        sbl = [search_name, search_prog, search_hours, search_start, search_end,
+            search_total, search_completed, search_series, search_genre, search_platform]
+
+        search_box.addWidget(search_label)
+        search_box.addWidget(self.game_search["bar"], 0, 1, 1, -1)
+        search_box.addWidget(option_label, 1, 0)
+
+        for i in range(1, len(sbl) + 1):
+            self.game_search["options"].addButton(sbl[i - 1], i)
+            if (i == 1):
+                sbl[i].setChecked(True)
+            sbl[i - 1].setToolTip("Filter by " + sbl[i - 1].text())
+            search_box.addWidget(sbl[i - 1], 1, i)
+
+        self.game_search["options"].buttonPressed.connect(self.set_game_filter)
+        self.game_search["bar"].returnPressed.connect(self.search_games)
+
+        # connect everything
         game_table.setVisible(True)
         games_layout.addWidget(title)
+        games_layout.addLayout(search_box)
         games_layout.addWidget(game_table)
         games_layout.addLayout(page_layout)
         games_frame.setLayout(games_layout)
@@ -224,7 +266,7 @@ class MainWindow(QMainWindow):
         self.main_scene.addLayout(nav_bar)
         self.main_scene.setStretchFactor(nav_bar, 0)
 
-    # functions to set themes
+    # functions to set options
     def set_theme(self, checked=False, theme=None):
         """
         sets the app's theme based on either a given theme
@@ -337,7 +379,7 @@ class MainWindow(QMainWindow):
         self.save_config()
         QMessageBox.information(self, "Success", "Games per page successfully updated")
 
-
+    # import/export functions
     def start_import(self):
         file_name = QFileDialog.getOpenFileName(self.menu_dict["settings"], "Choose import file", "~/", "(*.sqlite *.json)")
         chosen = self.menu_dict["settings"].findChild(QLabel, "chosen_import")
@@ -383,6 +425,7 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.critical(self, "Export Error", "Export failed")
 
+    # page functions
     def next_page(self):
         """
         tries going to next page; updates visibility of next page button,
@@ -430,6 +473,19 @@ class MainWindow(QMainWindow):
             self.page_bar["next"].hide()
         self.page_bar["label"].setText(f'Page {self.db.get_current_page() + 1}')
 
+    # search functions
+    def set_game_filter(self, button):
+        """
+        sets the proxy model to filter for the given expression on the given column
+        """
+        column = self.game_search["options"].id(button)
+        self.game_table.model().setFilterKeyColumn(column)
+
+    def search_games(self):
+        filter = self.game_search["bar"].text()
+        self.game_table.model().setFilterRegularExpression(filter)
+
+    # game functions
     def add_game(self):
         """
         constructs the item dict and genre and platform lists, then adds the game and updates the model
@@ -537,6 +593,7 @@ class MainWindow(QMainWindow):
                 self.series_table.setModel(self.db.get_series())
                 self.update_page_bar()
 
+    # functions for loading ui files/menus
     def load_settings(self):
         """
         loads the settings menu and connects functions to buttons
@@ -704,6 +761,7 @@ class MainWindow(QMainWindow):
 
             add_game.clicked.connect(self.add_game)
 
+    # functions to show menus
     def show_games(self):
         if (not self.current_menu == "games"):
             self.menu_dict[self.current_menu].hide()
