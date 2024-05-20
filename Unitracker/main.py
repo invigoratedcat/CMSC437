@@ -514,7 +514,7 @@ class MainWindow(QMainWindow):
         """
         sets which column the proxy model will filter on
         """
-        column = self.game_search["options"].id(button)
+        column = self.game_search["options"].id(button) - 1
         self.game_table.model().setFilterKeyColumn(column)
 
     def search_games(self):
